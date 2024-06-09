@@ -63,6 +63,7 @@ int main() {
     int j,k;
 #endif /* TESTS */
 
+    cout<<"MARS Test Program\n";
     /* do simple CBC encrypt/decrypt test for the high level stuff first */
     char keyMaterial[] = "000102030405060708090a0b0c0d0e0f";
     makeKey(&keyin, DIR_ENCRYPT, 128, keyMaterial);
