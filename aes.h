@@ -56,17 +56,17 @@ typedef unsigned long WORD;
 
 /*  The structure for key information */
 typedef struct {
-    BYTE  direction;	   /*  Key used for encrypting or decrypting?       */
-    int   keyLen;	   /*  Length of the key in BITS                    */
-    char  keyMaterial[MAX_KEY_SIZE+1];  /*  Raw key data in ASCII           */
-    WORD  E[EKEY_WORDS];   /* IBM addition for mars expanded key            */
+    BYTE direction; /*  Key used for encrypting or decrypting?       */
+    int keyLen; /*  Length of the key in BITS                    */
+    char keyMaterial[MAX_KEY_SIZE + 1]; /*  Raw key data in ASCII           */
+    WORD E[EKEY_WORDS]; /* IBM addition for mars expanded key            */
 } keyInstance;
 
 /*  The structure for cipher information */
 typedef struct {
-    BYTE mode;             /*  MODE_ECB, MODE_CBC, or MODE_CFB1             */
-    BYTE IV[MAX_IV_SIZE];  /*  initial binary IV BYTE for chaining          */
-    WORD CIV[NUM_DATA];    /*  IBM addition: current IV in binary WORDs     */
+    BYTE mode; /*  MODE_ECB, MODE_CBC, or MODE_CFB1             */
+    BYTE IV[MAX_IV_SIZE]; /*  initial binary IV BYTE for chaining          */
+    WORD CIV[NUM_DATA]; /*  IBM addition: current IV in binary WORDs     */
 } cipherInstance;
 
 /*  NIST High level function protoypes  */

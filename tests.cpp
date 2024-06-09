@@ -1,38 +1,7 @@
-/* tests.c reference code - copyright(c) 1998 IBM
- *
- * This code implements basic tests, as well as the NIST defined
- * KAT and MCT tests for the mars cipher.
- */
-
-/* Revisions log:
- *
- *   Apr 1998, Dave Safford - created
- */
-
-/* Compilation using pcg's version of gcc:
- *    gcc -Wall -pedantic -O6 -fomit-frame-pointer -mcpu=pentiumpro
- *        -o tests -DKAT tests.c mars.c
- *
- * Compilation using xlc on AIX:
- *    xlc -O3 -o tests -DKAT tests.c mars.c
- *
- * Compilation using Borland C++ 5.0 from a DOS command line:
- *    bcc32 -Oi -6 -v -A -a4 -O2 -DKAT tests.c mars.c
- *
- * Useful compilation defines:
- *    DIEHARD    - add code to write out diehard data for encrypt
- *    IVT        - add code to write out NIST intermediate values test
- *    KAT        - add code to write out NIST KAT data files
- *    MCT        - add code to write out NIST MCT data files
- * Note: for IVT to work, the mars code must also be compiled with -DIVT,
- * and doing so slows down encryption/decryption significantly.
- */
-
 #include "aes.h"
 #include <ctime>
-#include <sys/stat.h>
-#include <fcntl.h>
-
+#include <iostream>
+using namespace std;
 /*************************************************************************
  *
  *   test main() for the high and low level routines
@@ -55,15 +24,14 @@
 #endif
 #endif
 
-int main()
-{
+int main() {
     keyInstance keyin;
-    cipherInstance encipher,decipher;
+    cipherInstance encipher, decipher;
     WORD pt_in[NUM_DATA], ct[NUM_DATA], pt_out[NUM_DATA];
     WORD key[EKEY_WORDS];
     WORD e[EKEY_WORDS];
     BYTE ctbuf[32], outbuf[32];
-    clock_t clock1,clock2;
+    clock_t clock1, clock2;
     float ttime1;
     int i;
 #   ifdef DIEHARD
@@ -104,79 +72,77 @@ int main()
 
     // Encrypt the copied string
     blockEncrypt(&encipher, &keyin,
-                 reinterpret_cast<BYTE*>(buffer), 256, ctbuf);
+                 reinterpret_cast<BYTE *>(buffer), 256, ctbuf);
 
     // Decrypt the ciphertext
     blockDecrypt(&decipher, &keyin, ctbuf, 256, outbuf);
 
     // Print the decrypted message
-    printf("\nHigh level output test: \n %s\n", reinterpret_cast<char*>(outbuf));
+    printf("\nHigh level output test: \n %s\n", reinterpret_cast<char *>(outbuf));
 
 
     /* try the CFB-1 mode */
-    makeKey(&keyin,DIR_ENCRYPT,128,keyMaterial);
-    cipherInit(&encipher,MODE_CFB1,iv);
-    cipherInit(&decipher,MODE_CFB1,iv);
-    for(i=0;i<8;i++){
-        outbuf[0] = (i&1);
+    makeKey(&keyin,DIR_ENCRYPT, 128, keyMaterial);
+    cipherInit(&encipher,MODE_CFB1, iv);
+    cipherInit(&decipher,MODE_CFB1, iv);
+    for (i = 0; i < 8; i++) {
+        outbuf[0] = (i & 1);
         blockEncrypt(&encipher, &keyin, outbuf, 1, ctbuf);
         blockDecrypt(&decipher, &keyin, ctbuf, 1, outbuf);
-        printf(" CFB-1 bit %d bitin %d ctbit %d bitout %d \n",
-                i,i&1,ctbuf[0],outbuf[0]);
+        cout << " CFB-1 bit " << i << " bitin " << (i & 1) << " ctbit " << static_cast<int>(ctbuf[0]) << " bitout " <<
+                static_cast<int>(outbuf[0]) << endl;
     }
-    printf("\n");
+    cout << "\n";
 
     /* do simple encrypt/decrypt test for the low level stuff */
-    printf("Low level block tests:\n");
-    for (i=0;i<4;i++) {
-	pt_in[i] = 0x01020304;
-	key[i] = 0x01020304;
+    cout << "Low level block tests:" << endl;
+    for (i = 0; i < 4; i++) {
+        pt_in[i] = 0x01020304;
+        key[i] = 0x01020304;
     }
-    (void)mars_setup(4,key,e);
-    mars_encrypt(pt_in,ct,e);
-    mars_decrypt(ct,pt_out,e);
+    (void) mars_setup(4, key, e);
+    mars_encrypt(pt_in, ct, e);
+    mars_decrypt(ct, pt_out, e);
     printf(" in     %.8lX %.8lX %.8lX %.8lX\n",
-        pt_in[0], pt_in[1], pt_in[2], pt_in[3]);
+           pt_in[0], pt_in[1], pt_in[2], pt_in[3]);
     printf(" cipher %.8lX %.8lX %.8lX %.8lX\n",
-        ct[0], ct[1], ct[2], ct[3]);
+           ct[0], ct[1], ct[2], ct[3]);
     printf(" out    %.8lX %.8lX %.8lX %.8lX\n",
-        pt_out[0], pt_out[1], pt_out[2], pt_out[3]);
-    if (pt_in[0]!=pt_out[0] || pt_in[1]!=pt_out[1] ||
-        pt_in[2]!=pt_out[2] || pt_in[3]!=pt_out[3])
-        printf("Decryption Error!\n");
+           pt_out[0], pt_out[1], pt_out[2], pt_out[3]);
+    if (pt_in[0] != pt_out[0] || pt_in[1] != pt_out[1] ||
+        pt_in[2] != pt_out[2] || pt_in[3] != pt_out[3])
+        cout << "Decryption Error!" << endl;
     fflush(stdout);
 
     /* Do low level timing tests */
-    printf("\nLow level block timing tests:\n");
+    cout << "Low level block timing tests:" << endl;
     clock1 = clock();
-    for (i=1;i<40000;i++) {
-        (void)mars_setup(4,key,e);
-	key[0]++;
+    for (i = 1; i < 40000; i++) {
+        (void) mars_setup(4, key, e);
+        key[0]++;
     }
     clock2 = clock();
     ttime1 = static_cast<double>(clock2 - clock1) / CLOCKS_PER_SEC;
-    printf("\nTime for 40K 128 bit setups:  %f \n", ttime1);
-    printf(" %fMbit/sec\n", 5.12 / ttime1);
+    cout << "Time for 40K 128 bit setups: " << ttime1 << endl;
+    cout << " " << (5.12 / ttime1) << " Mbit/sec" << endl;
 
 
-    (void)mars_setup(4,key,e);
+    (void) mars_setup(4, key, e);
     clock1 = clock();
-    for (i=1;i<400000;i++)
-        mars_encrypt(pt_in,ct,e);
+    for (i = 1; i < 400000; i++)
+        mars_encrypt(pt_in, ct, e);
     clock2 = clock();
     ttime1 = static_cast<float>(clock2 - clock1) / CLOCKS_PER_SEC;
-    printf("\nTime for encrypting 400K 128 bit blocks:  %f \n", ttime1);
-    printf(" %fMbit/sec\n", 51.2 / ttime1);
-
+    cout << "Time for encrypting 400K 128 bit blocks: " << ttime1 << endl;
+    cout << " " << (51.2 / ttime1) << " Mbit/sec" << endl;
 
     clock1 = clock();
-    for (i=1;i<400000;i++)
-        mars_decrypt(pt_in,ct,e);
+    for (i = 1; i < 400000; i++)
+        mars_decrypt(pt_in, ct, e);
     clock2 = clock();
     ttime1 = static_cast<float>(clock2 - clock1) / CLOCKS_PER_SEC;
-    printf("\nTime for decrypting 400K 128 bit blocks:  %f \n", ttime1);
-    printf(" %fMbit/sec\n", 51.2 / ttime1);
-
+    cout << "Time for decrypting 400K 128 bit blocks: " << ttime1 << endl;
+    cout << " " << (51.2 / ttime1) << " Mbit/sec" << endl;
 
 #ifdef DIEHARD
     /* write file for diehard randomness stress tests */
@@ -225,7 +191,7 @@ int main()
         fprintf(fp,"%c%c",tohex[ctbuf[k]>>4],tohex[ctbuf[k]&0x0f]);
     fprintf(fp,"\n\n==========\n\nDecryption: KEYSIZE=128\n\n");
     fprintf(fp,"KEY=%s\n",akey);
-    fprintf(fp,"CT=");
+        fprintf(fp,"CT=");
     for(k=0;k<16;k++)
         fprintf(fp,"%c%c",tohex[ctbuf[k]>>4],tohex[ctbuf[k]&0x0f]);
     ivt_l = 0;
@@ -1131,6 +1097,5 @@ int main()
 
 #endif /* MCT */
 
-    return(0);
+    return (0);
 }
-
