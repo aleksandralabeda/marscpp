@@ -630,9 +630,9 @@ int makeKey(keyInstance *key, BYTE direction, int keyLen, char *keyMaterial)
     int i,j;
 
     /* sanity check pointers */
-    if (key == NULL)
+    if (key == nullptr)
         return(BAD_KEY_INSTANCE);
-    if (keyMaterial == NULL)
+    if (keyMaterial == nullptr)
         return(BAD_KEY_MAT);
 
     /* save parameters into keyInstance */
@@ -662,7 +662,7 @@ int cipherInit(cipherInstance *cipher, BYTE mode, char *IV)
     int i,j;
 
     /* sanity check pointers */
-    if (cipher == NULL)
+    if (cipher == nullptr)
         return(BAD_CIPHER_MODE);
 
     /* save cipher parameters */
@@ -670,7 +670,7 @@ int cipherInit(cipherInstance *cipher, BYTE mode, char *IV)
 
     /* handle IV */
     if((mode == MODE_CBC)||(mode == MODE_CFB1)) {
-        if(IV == NULL)
+        if(IV == nullptr)
             return(BAD_CIPHER_MODE);
         /* convert ascii IV to BYTEs */
         for(i=0,j=0;j<MAX_IV_SIZE;i+=2,j++)
