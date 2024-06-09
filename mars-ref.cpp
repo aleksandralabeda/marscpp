@@ -1,49 +1,4 @@
-/* mars.c reference code - copyright(c) 1998,1999 IBM
- *
- * This code implements both the NIST high level C API (version 5)
- * and an underlying IBM defined low level (WORD oriented) C API.
- */
-
-/* Revisions log:
- *
- *   May 1999, Dave && Shai - newer key scheduling
- *   Apr 1998, Dave && Shai - new key scheduling, new sbox, NIST API
- *   Mar 1998, Shai Halevi  - adapted to the latest variant of mars
- *   Feb 1998, Dave Safford - created
- */
-
-/* Compilation using pcg's version of gcc:
- *   gcc -Wall -pedantic -o tests -O6 -fomit-frame-pointer -mcpu=pentiumpro
- *       -DKAT tests.c mars-ref.c
- *
- * Compilation using xlc on AIX:
- *   xlc -c -O3 -DAIX_XLC mars-ref.c
- *
- * Compilation using Borland C++ 5.0 from a DOS command line:
- *   bcc32 -Oi -6 -v -A -a4 -O2 -DKAT tests.c mars.c
- *
- * Useful compilation defines:
- *   SWAP_BYTES - force endian conversion (eg __BYTE_ORDER not supported)
- *   IVT        - include code for intermediate values output
- *                (slows down the code)
- *   NO_TWEAK1, NO_TWEAK2 - eliminate the 1st, 2nd tweak to the key setup
- */
-
 #include "aes.h"
-
-/* The low level mars routines are completely WORD oriented, and
- * endian neutral. The high level NIST routines provide BYTE oriented
- * inputs and outputs, thus raising the endian issue when converting
- * between BYTEs and WORDs. For these conversions, mars assumes
- * little endian order. On a big endian machine, we define BSWAP()
- * to do the conversions. BSWAP() is about the best you can do in C.
- * Real implementations will undoubtedly use inline ASM, as most risc
- * machines can do this in one instruction.
- *
- * Make a best guess on platform endianness; This works on linux, AIX,
- * and W95. For other platforms, you may have to manually define SWAP_BYTES
- * on a big endian machine if this guessing doesn't work.
- */
 #ifdef _AIX
 #define SWAP_BYTES
 #else

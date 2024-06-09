@@ -1,5 +1,7 @@
 #include "aes.h"
 #include <ctime>
+#include <iomanip>
+#include <fstream>
 #include <iostream>
 using namespace std;
 /*************************************************************************
@@ -52,14 +54,14 @@ int main() {
                       0x5de9d8d6, 0x68843750, 0xa2e71b63, 0xeff8e372,
                       0x8792349d, 0x8a58369a, 0x2e9382ba, 0xa72b988f};
 #endif
-#   ifdef TESTS
-        FILE *fp;
-        BYTE ptbuf[16];
-        char akey[MAX_KEY_SIZE+1];
-        char tohex[16] = { '0','1','2','3','4','5','6','7','8',
-                           '9','A','B','C','D','E','F' };
-        int j,k;
-#   endif /* TESTS */
+#ifdef TESTS
+    fstream file;
+    BYTE ptbuf[16];
+    char akey[MAX_KEY_SIZE+1];
+    char tohex[16] = { '0','1','2','3','4','5','6','7','8',
+                       '9','A','B','C','D','E','F' };
+    int j,k;
+#endif /* TESTS */
 
     /* do simple CBC encrypt/decrypt test for the high level stuff first */
     char keyMaterial[] = "000102030405060708090a0b0c0d0e0f";
@@ -146,116 +148,120 @@ int main() {
 
 #ifdef DIEHARD
     /* write file for diehard randomness stress tests */
-    fd = creat("mars.dat",S_IRUSR|S_IRGRP|S_IROTH);
-    (void)mars_setup(4,key,e);
-    for (i=0;i<1024*1024;i++) {
+    ofstream file("mars.dat", ios::binary);
+    mars_setup(4, key, e);
+    for (int i = 0; i < 1024*1024; i++) {
         pt_in[0] = i;
         mars_encrypt(pt_in, ct, e);
-        write(fd,(unsigned char *)ct, 16);
+        file.write(reinterpret_cast<char*>(ct), 16);
     }
-    close(fd);
+    file.close();
 #endif /* DIEHARD */
-
+    ////////////////////////////////////////////////
 #ifdef IVT
     /*************************************************************************
      *
      * Intermediate Value Test -> ecb_ivt.txt
      *
      ************************************************************************/
-    fp = fopen("ecb_ivt.txt","w");
-    ivt_fp = fp;
-    ivt_l = 0;
-    ivt_debug=1;
-    fprintf(fp,"=========================\n\n");
-    fprintf(fp,"FILENAME:  \"ecb_ivt.txt\"\n\n");
-    fprintf(fp,"Electronic Codebook (ECB) Mode\n");
-    fprintf(fp,"Intermediate Values Tests\n\n");
-    fprintf(fp,"Algorithm Name: Mars\n");
-    fprintf(fp,"Principle Submitter: IBM");
-    /* the input plaintext and key are all zeros */
-    for(i=0;i<16;i++)
-        ptbuf[i] = 0;
-    /* 128 bit keys */
-    for(i=0;i<32;i++)
-        akey[i] = '0';
-    akey[32] = '\0';
-    fprintf(fp,"\n\n==========\n\nEncryption: KEYSIZE=128\n\n");
-    fprintf(fp,"KEY=%s\n",akey);
-    fprintf(fp,"PT=00000000000000000000000000000000\n");
-    makeKey(&keyin,DIR_ENCRYPT,128,akey);
-    cipherInit(&encipher,MODE_ECB,NULL);
-    cipherInit(&decipher,MODE_ECB,NULL);
-    blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
-    fprintf(fp,"CT=");
-    for(k=0;k<16;k++)
-        fprintf(fp,"%c%c",tohex[ctbuf[k]>>4],tohex[ctbuf[k]&0x0f]);
-    fprintf(fp,"\n\n==========\n\nDecryption: KEYSIZE=128\n\n");
-    fprintf(fp,"KEY=%s\n",akey);
-        fprintf(fp,"CT=");
-    for(k=0;k<16;k++)
-        fprintf(fp,"%c%c",tohex[ctbuf[k]>>4],tohex[ctbuf[k]&0x0f]);
-    ivt_l = 0;
-    fprintf(fp,"\n");
-    blockDecrypt(&decipher, &keyin, ctbuf, 128, outbuf);
-    fprintf(fp,"PT=");
-    for(k=0;k<16;k++)
-        fprintf(fp,"%c%c",tohex[outbuf[k]>>4],tohex[outbuf[k]&0x0f]);
-    /* 192 bit keys */
-    for(i=0;i<48;i++)
-        akey[i] = '0';
-    akey[48] = '\0';
-    fprintf(fp,"\n\n==========\n\nEncryption: KEYSIZE=192\n\n");
-    fprintf(fp,"KEY=%s\n",akey);
-    fprintf(fp,"PT=00000000000000000000000000000000\n");
-    makeKey(&keyin,DIR_ENCRYPT,192,akey);
-    cipherInit(&encipher,MODE_ECB,NULL);
-    cipherInit(&decipher,MODE_ECB,NULL);
-    ivt_l = 0;
-    blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
-    fprintf(fp,"CT=");
-    for(k=0;k<16;k++)
-        fprintf(fp,"%c%c",tohex[ctbuf[k]>>4],tohex[ctbuf[k]&0x0f]);
-    fprintf(fp,"\n\n==========\n\nDecryption: KEYSIZE=192\n\n");
-    fprintf(fp,"KEY=%s\n",akey);
-    fprintf(fp,"CT=");
-    for(k=0;k<16;k++)
-        fprintf(fp,"%c%c",tohex[ctbuf[k]>>4],tohex[ctbuf[k]&0x0f]);
-    ivt_l = 0;
-    fprintf(fp,"\n");
-    blockDecrypt(&decipher, &keyin, ctbuf, 128, outbuf);
-    fprintf(fp,"PT=");
-    for(k=0;k<16;k++)
-        fprintf(fp,"%c%c",tohex[outbuf[k]>>4],tohex[outbuf[k]&0x0f]);
-    /* 256 bit keys */
-    for(i=0;i<64;i++)
-        akey[i] = '0';
-    akey[64] = '\0';
-    fprintf(fp,"\n\n==========\n\nEncryption: KEYSIZE=256\n\n");
-    fprintf(fp,"KEY=%s\n",akey);
-    fprintf(fp,"PT=00000000000000000000000000000000\n");
-    makeKey(&keyin,DIR_ENCRYPT,256,akey);
-    cipherInit(&encipher,MODE_ECB,NULL);
-    cipherInit(&decipher,MODE_ECB,NULL);
-    ivt_l = 0;
-    blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
-    fprintf(fp,"CT=");
-    for(k=0;k<16;k++)
-        fprintf(fp,"%c%c",tohex[ctbuf[k]>>4],tohex[ctbuf[k]&0x0f]);
-    fprintf(fp,"\n\n==========\n\nDecryption: KEYSIZE=256\n\n");
-    fprintf(fp,"KEY=%s\n",akey);
-    fprintf(fp,"CT=");
-    for(k=0;k<16;k++)
-        fprintf(fp,"%c%c",tohex[ctbuf[k]>>4],tohex[ctbuf[k]&0x0f]);
-    ivt_l = 0;
-    fprintf(fp,"\n");
-    blockDecrypt(&decipher, &keyin, ctbuf, 128, outbuf);
-    fprintf(fp,"PT=");
-    for(k=0;k<16;k++)
-        fprintf(fp,"%c%c",tohex[outbuf[k]>>4],tohex[outbuf[k]&0x0f]);
-    fprintf(fp,"\n");
-    fclose(fp);
-    ivt_debug=0;
-    j = 0;  /* make Wall happy */
+  // Intermediate Value Test -> ecb_ivt.txt
+ofstream file("ecb_ivt.txt");
+ivt_l = 0;
+ivt_debug=1;
+file << "=========================\n\n";
+file << "FILENAME:  \"ecb_ivt.txt\"\n\n";
+file << "Electronic Codebook (ECB) Mode\n";
+file << "Intermediate Values Tests\n\n";
+file << "Algorithm Name: Mars\n";
+file << "Principle Submitter: IBM\n";
+
+// the input plaintext and key are all zeros
+for(int i=0;i<16;i++)
+    ptbuf[i] = 0;
+
+// 128 bit keys
+for(int i=0;i<32;i++)
+    akey[i] = '0';
+akey[32] = '\0';
+file << "\n\n==========\n\nEncryption: KEYSIZE=128\n\n";
+file << "KEY=" << akey << "\n";
+file << "PT=00000000000000000000000000000000\n";
+makeKey(&keyin,DIR_ENCRYPT,128,akey);
+cipherInit(&encipher,MODE_ECB,NULL);
+cipherInit(&decipher,MODE_ECB,NULL);
+blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
+file << "CT=";
+for(int k=0;k<16;k++)
+    file << hex << setw(2) << setfill('0') << static_cast<int>(ctbuf[k]);
+file << "\n\n==========\n\nDecryption: KEYSIZE=128\n\n";
+file << "KEY=" << akey << "\n";
+file << "CT=";
+for(int k=0;k<16;k++)
+    file << hex << setw(2) << setfill('0') << static_cast<int>(ctbuf[k]);
+ivt_l = 0;
+file << "\n";
+blockDecrypt(&decipher, &keyin, ctbuf, 128, outbuf);
+file << "PT=";
+for(int k=0;k<16;k++)
+    file << hex << setw(2) << setfill('0') << static_cast<int>(outbuf[k]);
+
+// 192 bit keys
+for(int i=0;i<48;i++)
+    akey[i] = '0';
+akey[48] = '\0';
+file << "\n\n==========\n\nEncryption: KEYSIZE=192\n\n";
+file << "KEY=" << akey << "\n";
+file << "PT=00000000000000000000000000000000\n";
+makeKey(&keyin,DIR_ENCRYPT,192,akey);
+cipherInit(&encipher,MODE_ECB,NULL);
+cipherInit(&decipher,MODE_ECB,NULL);
+ivt_l = 0;
+blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
+file << "CT=";
+for(int k=0;k<16;k++)
+    file << hex << setw(2) << setfill('0') << static_cast<int>(ctbuf[k]);
+file << "\n\n==========\n\nDecryption: KEYSIZE=192\n\n";
+file << "KEY=" << akey << "\n";
+file << "CT=";
+for(int k=0;k<16;k++)
+    file << hex << setw(2) << setfill('0') << static_cast<int>(ctbuf[k]);
+ivt_l = 0;
+file << "\n";
+blockDecrypt(&decipher, &keyin, ctbuf, 128, outbuf);
+file << "PT=";
+for(int k=0;k<16;k++)
+    file << hex << setw(2) << setfill('0') << static_cast<int>(outbuf[k]);
+
+// 256 bit keys
+for(int i=0;i<64;i++)
+    akey[i] = '0';
+akey[64] = '\0';
+file << "\n\n==========\n\nEncryption: KEYSIZE=256\n\n";
+file << "KEY=" << akey << "\n";
+file << "PT=00000000000000000000000000000000\n";
+makeKey(&keyin,DIR_ENCRYPT,256,akey);
+cipherInit(&encipher,MODE_ECB,NULL);
+cipherInit(&decipher,MODE_ECB,NULL);
+ivt_l = 0;
+blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
+file << "CT=";
+for(int k=0;k<16;k++)
+    file << hex << setw(2) << setfill('0') << static_cast<int>(ctbuf[k]);
+file << "\n\n==========\n\nDecryption: KEYSIZE=256\n\n";
+file << "KEY=" << akey << "\n";
+file << "CT=";
+for(int k=0;k<16;k++)
+    file << hex << setw(2) << setfill('0') << static_cast<int>(ctbuf[k]);
+ivt_l = 0;
+file << "\n";
+blockDecrypt(&decipher, &keyin, ctbuf, 128, outbuf);
+file << "PT=";
+for(int k=0;k<16;k++)
+    file << hex << setw(2) << setfill('0') << static_cast<int>(outbuf[k]);
+file << "\n";
+file.close();
+ivt_debug=0;
+j = 0;  // make Wall happy
 #endif /* IVT */
 
 #ifdef KAT
@@ -264,73 +270,81 @@ int main() {
      * Variable Key KAT -> ecb_vk.txt
      *
      ************************************************************************/
-    fp = fopen("ecb_vk.txt","w");
-    fprintf(fp,"=========================\n\n");
-    fprintf(fp,"FILENAME:  \"ecb_vk.txt\"\n\n");
-    fprintf(fp,"Electronic Codebook (ECB) Mode\n");
-    fprintf(fp,"Variable Key Known Answer Tests\n\n");
-    fprintf(fp,"Algorithm Name: Mars\n");
-    fprintf(fp,"Principle Submitter: IBM");
-    /* the input plaintext is all zeros */
-    for(i=0;i<16;i++)
-        ptbuf[i] = 0;
-    /* 128 bit keys */
-    akey[32] = '\0';
-    fprintf(fp,"\n\n==========\n\nKEYSIZE=128\n\n");
-    fprintf(fp,"PT=00000000000000000000000000000000");
-    for(i=0;i<32;i++) {
-        for(j=3;j>=0;j--){
-            for (k=0;k<32;k++)
-                akey[k] = '0';
-            akey[i] = '0' + (1<<j);
-            makeKey(&keyin,DIR_ENCRYPT,128,akey);
-            cipherInit(&encipher,MODE_ECB,NULL);
-            cipherInit(&decipher,MODE_ECB,NULL);
-            blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
-            blockDecrypt(&decipher, &keyin, ctbuf, 128, outbuf);
-            fprintf(fp,"\n\nI=%d\n",i*4+4-j);
-            fprintf(fp,"KEY=%s\n",akey);
-            fprintf(fp,"CT=");
-            for(k=0;k<16;k++){
-                if(outbuf[k] != 0)
-                    fprintf(fp,"*decyrption error*\n");
-                else
-                    fprintf(fp,"%c%c",tohex[ctbuf[k]>>4],tohex[ctbuf[k]&0x0f]);
-            }
+/////////////////////////////////////////////////////////////////////////////////////////////
+// 128 bit keys
+ofstream file("ecb_vk.txt");
+file << "=========================\n\n";
+file << "FILENAME:  \"ecb_vk.txt\"\n\n";
+file << "Electronic Codebook (ECB) Mode\n";
+file << "Variable Key Known Answer Tests\n\n";
+file << "Algorithm Name: Mars\n";
+file << "Principle Submitter: IBM\n";
+// the input plaintext is all zeros
+for(int i = 0; i < 16; i++)
+    ptbuf[i] = 0;
+
+    // 128 bit keys
+akey[32] = '\0';
+file << "\n\n==========\n\nKEYSIZE=128\n\n";
+file << "PT=00000000000000000000000000000000\n";
+
+for(int i = 0; i < 32; i++) {
+    for(int j = 3; j >= 0; j--){
+        for (int k = 0; k < 32; k++)
+            akey[k] = '0';
+        akey[i] = '0' + (1<<j);
+        makeKey(&keyin,DIR_ENCRYPT,128,akey);
+        cipherInit(&encipher,MODE_ECB,NULL);
+        cipherInit(&decipher,MODE_ECB,NULL);
+        blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
+        blockDecrypt(&decipher, &keyin, ctbuf, 128, outbuf);
+        file << "\n\nI=" << i*4+4-j << "\n";
+        file << "KEY=" << akey << "\n";
+        file << "CT=";
+        for(int k = 0; k < 16; k++){
+            if(outbuf[k] != 0)
+                file << "*decryption error*\n";
+            else
+                file << hex << setw(2) << setfill('0') << static_cast<int>(ctbuf[k]);
         }
+        file << "\n";
     }
-    /* 192 bit keys */
-    akey[48] = '\0';
-    fprintf(fp,"\n\n==========\n\nKEYSIZE=192\n\n");
-    fprintf(fp,"PT=00000000000000000000000000000000");
-    for(i=0;i<48;i++) {
-        for(j=3;j>=0;j--){
-            for (k=0;k<48;k++)
-                akey[k] = '0';
-            akey[i] = '0' + (1<<j);
-            makeKey(&keyin,DIR_ENCRYPT,192,akey);
-            cipherInit(&encipher,MODE_ECB,NULL);
-            cipherInit(&decipher,MODE_ECB,NULL);
-            blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
-            blockDecrypt(&decipher, &keyin, ctbuf, 128, outbuf);
-            fprintf(fp,"\n\nI=%d\n",i*4+4-j);
-            fprintf(fp,"KEY=%s\n",akey);
-            fprintf(fp,"CT=");
-            for(k=0;k<16;k++){
-                if(outbuf[k] != 0)
-                    fprintf(fp,"*decyrption error*\n");
-                else
-                    fprintf(fp,"%c%c",tohex[ctbuf[k]>>4],tohex[ctbuf[k]&0x0f]);
-            }
+}
+// 192 bit keys
+akey[48] = '\0';
+file << "\n\n==========\n\nKEYSIZE=192\n\n";
+file << "PT=00000000000000000000000000000000\n";
+
+for(int i = 0; i < 48; i++) {
+    for(int j = 3; j >= 0; j--){
+        for (int k = 0; k < 48; k++)
+            akey[k] = '0';
+        akey[i] = '0' + (1<<j);
+        makeKey(&keyin,DIR_ENCRYPT,192,akey);
+        cipherInit(&encipher,MODE_ECB,NULL);
+        cipherInit(&decipher,MODE_ECB,NULL);
+        blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
+        blockDecrypt(&decipher, &keyin, ctbuf, 128, outbuf);
+        file << "\n\nI=" << i*4+4-j << "\n";
+        file << "KEY=" << akey << "\n";
+        file << "CT=";
+        for(int k = 0; k < 16; k++){
+            if(outbuf[k] != 0)
+                file << "*decryption error*\n";
+            else
+                file << hex << setw(2) << setfill('0') << static_cast<int>(ctbuf[k]);
         }
+        file << "\n";
     }
-    /* 256 bit keys */
+}
+    // 256 bit keys
     akey[64] = '\0';
-    fprintf(fp,"\n\n==========\n\nKEYSIZE=256\n\n");
-    fprintf(fp,"PT=00000000000000000000000000000000");
-    for(i=0;i<64;i++) {
-        for(j=3;j>=0;j--){
-            for (k=0;k<64;k++)
+    file << "\n\n==========\n\nKEYSIZE=256\n\n";
+    file << "PT=00000000000000000000000000000000\n";
+
+    for(int i = 0; i < 64; i++) {
+        for(int j = 3; j >= 0; j--){
+            for (int k = 0; k < 64; k++)
                 akey[k] = '0';
             akey[i] = '0' + (1<<j);
             makeKey(&keyin,DIR_ENCRYPT,256,akey);
@@ -338,42 +352,43 @@ int main() {
             cipherInit(&decipher,MODE_ECB,NULL);
             blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
             blockDecrypt(&decipher, &keyin, ctbuf, 128, outbuf);
-            fprintf(fp,"\n\nI=%d\n",i*4+4-j);
-            fprintf(fp,"KEY=%s\n",akey);
-            fprintf(fp,"CT=");
-            for(k=0;k<16;k++){
+            file << "\n\nI=" << i*4+4-j << "\n";
+            file << "KEY=" << akey << "\n";
+            file << "CT=";
+            for(int k = 0; k < 16; k++){
                 if(outbuf[k] != 0)
-                    fprintf(fp,"*decyrption error*\n");
+                    file << "*decryption error*\n";
                 else
-                    fprintf(fp,"%c%c",tohex[ctbuf[k]>>4],tohex[ctbuf[k]&0x0f]);
+                    file << hex << setw(2) << setfill('0') << static_cast<int>(ctbuf[k]);
             }
+            file << "\n";
         }
     }
-    fprintf(fp,"\n==========\n");
-    fclose(fp);
-
+    file << "\n==========\n";
+    file.close();
+/////////////////////////////////////////////////////////////////////////////////////////////////
     /*************************************************************************
      *
      * Variable Text KAT -> ecb_vt.txt
      *
      ************************************************************************/
-    fp = fopen("ecb_vt.txt","w");
-    fprintf(fp,"=========================\n\n");
-    fprintf(fp,"FILENAME:  \"ecb_vt.txt\"\n\n");
-    fprintf(fp,"Electronic Codebook (ECB) Mode\n");
-    fprintf(fp,"Variable Text Known Answer Tests\n\n");
-    fprintf(fp,"Algorithm Name: Mars\n");
-    fprintf(fp,"Principle Submitter: IBM");
+    ofstream file("ecb_vt.txt");
+    file << "=========================\n\n";
+    file << "FILENAME:  \"ecb_vt.txt\"\n\n";
+    file << "Electronic Codebook (ECB) Mode\n";
+    file << "Variable Text Known Answer Tests\n\n";
+    file << "Algorithm Name: Mars\n";
+    file << "Principle Submitter: IBM\n";
     /* the input key is all zeros */
-    for(i=0;i<64;i++)
+    for(int i=0;i<64;i++)
         akey[i] = '0';
     akey[64] = '\0';
     /* 128 bit keys */
-    fprintf(fp,"\n\n==========\n\nKEYSIZE=128\n\n");
-    fprintf(fp,"KEY=00000000000000000000000000000000");
-    for(i=0;i<16;i++) {
-        for(j=7;j>=0;j--){
-            for (k=0;k<16;k++)
+    file << "\n\n==========\n\nKEYSIZE=128\n\n";
+    file << "KEY=00000000000000000000000000000000\n";
+    for(int i=0;i<16;i++) {
+        for(int j=7;j>=0;j--){
+            for (int k=0;k<16;k++)
                 ptbuf[k] = 0;
             ptbuf[i] = (1<<j);
             makeKey(&keyin,DIR_ENCRYPT,128,akey);
@@ -381,25 +396,25 @@ int main() {
             cipherInit(&decipher,MODE_ECB,NULL);
             blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
             blockDecrypt(&decipher, &keyin, ctbuf, 128, outbuf);
-            fprintf(fp,"\n\nI=%d\n",i*8+8-j);
-            fprintf(fp,"PT=");
-            for(k=0;k<16;k++)
-                fprintf(fp,"%c%c",tohex[ptbuf[k]>>4],tohex[ptbuf[k]&0x0f]);
-            fprintf(fp,"\nCT=");
-            for(k=0;k<16;k++){
+            file << "\n\nI=" << i*8+8-j << "\n";
+            file << "PT=";
+            for(int k=0;k<16;k++)
+                file << hex << setw(2) << setfill('0') << static_cast<int>(ptbuf[k]);
+            file << "\nCT=";
+            for(int k=0;k<16;k++){
                 if(outbuf[k] != ptbuf[k])
-                    fprintf(fp,"*decyrption error*\n");
+                    file << "*decryption error*\n";
                 else
-                    fprintf(fp,"%c%c",tohex[ctbuf[k]>>4],tohex[ctbuf[k]&0x0f]);
+                    file << hex << setw(2) << setfill('0') << static_cast<int>(ctbuf[k]);
             }
         }
     }
     /* 192 bit keys */
-    fprintf(fp,"\n\n==========\n\nKEYSIZE=192\n\n");
-    fprintf(fp,"KEY=000000000000000000000000000000000000000000000000");
-    for(i=0;i<16;i++) {
-        for(j=7;j>=0;j--){
-            for (k=0;k<16;k++)
+    file << "\n\n==========\n\nKEYSIZE=192\n\n";
+    file << "KEY=000000000000000000000000000000000000000000000000\n";
+    for(int i=0;i<16;i++) {
+        for(int j=7;j>=0;j--){
+            for (int k=0;k<16;k++)
                 ptbuf[k] = 0;
             ptbuf[i] = (1<<j);
             makeKey(&keyin,DIR_ENCRYPT,192,akey);
@@ -407,26 +422,26 @@ int main() {
             cipherInit(&decipher,MODE_ECB,NULL);
             blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
             blockDecrypt(&decipher, &keyin, ctbuf, 128, outbuf);
-            fprintf(fp,"\n\nI=%d\n",i*8+8-j);
-            fprintf(fp,"PT=");
-            for(k=0;k<16;k++)
-                fprintf(fp,"%c%c",tohex[ptbuf[k]>>4],tohex[ptbuf[k]&0x0f]);
-            fprintf(fp,"\nCT=");
-            for(k=0;k<16;k++){
+            file << "\n\nI=" << i*8+8-j << "\n";
+            file << "PT=";
+            for(int k=0;k<16;k++)
+                file << hex << setw(2) << setfill('0') << static_cast<int>(ptbuf[k]);
+            file << "\nCT=";
+            for(int k=0;k<16;k++){
                 if(outbuf[k] != ptbuf[k])
-                    fprintf(fp,"*decyrption error*\n");
+                    file << "*decryption error*\n";
                 else
-                    fprintf(fp,"%c%c",tohex[ctbuf[k]>>4],tohex[ctbuf[k]&0x0f]);
+                    file << hex << setw(2) << setfill('0') << static_cast<int>(ctbuf[k]);
             }
         }
     }
     /* 256 bit key */
-    fprintf(fp,"\n\n==========\n\nKEYSIZE=256\n\n");
-    fprintf(fp,"KEY=00000000000000000000000000000000");
-    fprintf(fp,"00000000000000000000000000000000");
-    for(i=0;i<16;i++) {
-        for(j=7;j>=0;j--){
-            for (k=0;k<16;k++)
+    file << "\n\n==========\n\nKEYSIZE=256\n\n";
+    file << "KEY=00000000000000000000000000000000";
+    file << "00000000000000000000000000000000\n";
+    for(int i=0;i<16;i++) {
+        for(int j=7;j>=0;j--){
+            for (int k=0;k<16;k++)
                 ptbuf[k] = 0;
             ptbuf[i] = (1<<j);
             makeKey(&keyin,DIR_ENCRYPT,256,akey);
@@ -434,667 +449,663 @@ int main() {
             cipherInit(&decipher,MODE_ECB,NULL);
             blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
             blockDecrypt(&decipher, &keyin, ctbuf, 128, outbuf);
-            fprintf(fp,"\n\nI=%d\n",i*8+8-j);
-            fprintf(fp,"PT=");
-            for(k=0;k<16;k++)
-                fprintf(fp,"%c%c",tohex[ptbuf[k]>>4],tohex[ptbuf[k]&0x0f]);
-            fprintf(fp,"\nCT=");
-            for(k=0;k<16;k++){
+            file << "\n\nI=" << i*8+8-j << "\n";
+            file << "PT=";
+            for(int k=0;k<16;k++)
+                file << hex << setw(2) << setfill('0') << static_cast<int>(ptbuf[k]);
+            file << "\nCT=";
+            for(int k=0;k<16;k++){
                 if(outbuf[k] != ptbuf[k])
-                    fprintf(fp,"*decyrption error*\n");
+                    file << "*decryption error*\n";
                 else
-                    fprintf(fp,"%c%c",tohex[ctbuf[k]>>4],tohex[ctbuf[k]&0x0f]);
+                    file << hex << setw(2) << setfill('0') << static_cast<int>(ctbuf[k]);
             }
         }
     }
-    fprintf(fp,"\n==========\n");
-    fclose(fp);
+    file << "\n==========\n";
+    file.close();
+//////////////////////////////////////////////////////////////////////////////////////////
+Here is the C++ version of the selected code:
 
-    /*************************************************************************
-     * Tables KAT -> ecb_tbl.txt
-     * To test all Sbox entries, we fix the key to be zero, start
-     * with some initial plaintext, and iterate, setting each
-     * next plaintext to the last ciphertext output.  We instrumented
-     * the sbox lookups, and found that after 40 such iterations, all
-     * sboxes had been used at least once for each key length.
-     ************************************************************************/
-    fp = fopen("ecb_tbl.txt","w");
-    fprintf(fp,"/*  This tests all 512 entries in the fixed Sbox  */\n\n");
-    fprintf(fp,"=========================\n\n");
-    fprintf(fp,"FILENAME:  \"ecb_tbl.txt\"\n\n");
-    fprintf(fp,"Electronic Codebook (ECB) Mode\n");
-    fprintf(fp,"Tables Known Answer Tests\n\n");
-    fprintf(fp,"Algorithm Name: Mars\n");
-    fprintf(fp,"Principle Submitter: IBM");
-    /* the input key is all zeros */
-    for(i=0;i<64;i++)
-        akey[i] = '0';
-    akey[64] = '\0';
+```cpp
+/* Tables KAT -> ecb_tbl.txt
+ * To test all Sbox entries, we fix the key to be zero, start
+ * with some initial plaintext, and iterate, setting each
+ * next plaintext to the last ciphertext output.  We instrumented
+ * the sbox lookups, and found that after 40 such iterations, all
+ * sboxes had been used at least once for each key length.
+ */
+ofstream file("ecb_tbl.txt");
+file << "/*  This tests all 512 entries in the fixed Sbox  */\n\n";
+file << "=========================\n\n";
+file << "FILENAME:  \"ecb_tbl.txt\"\n\n";
+file << "Electronic Codebook (ECB) Mode\n";
+file << "Tables Known Answer Tests\n\n";
+file << "Algorithm Name: Mars\n";
+file << "Principle Submitter: IBM";
+/* the input key is all zeros */
+for(int i=0;i<64;i++)
+    akey[i] = '0';
+akey[64] = '\0';
 
-    /* 128 bit keys */
-    fprintf(fp,"\n\n==========\n\nKEYSIZE=128");
-    makeKey(&keyin,DIR_ENCRYPT,128,akey);
-    cipherInit(&encipher,MODE_ECB,NULL);
-    /* set some interesting starting text */
-    for(i=0;i<16;i++)
-        ptbuf[i] = 0;
-    for(i=1;i<41;i++) {
-        blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
-        fprintf(fp,"\n\nI=%d\n",i);
-        fprintf(fp,"KEY=00000000000000000000000000000000\n");
-        fprintf(fp,"PT=");
-        for(k=0;k<16;k++)
-            fprintf(fp,"%c%c",tohex[ptbuf[k]>>4],tohex[ptbuf[k]&0x0f]);
-        fprintf(fp,"\nCT=");
-        for(k=0;k<16;k++){
-            fprintf(fp,"%c%c",tohex[ctbuf[k]>>4],tohex[ctbuf[k]&0x0f]);
-        }
-        for(j=0;j<16;j++)
-            ptbuf[j] = ctbuf[j];
-    }
-    /* 192 bit keys */
-    fprintf(fp,"\n\n==========\n\nKEYSIZE=192");
-    makeKey(&keyin,DIR_ENCRYPT,192,akey);
-    cipherInit(&encipher,MODE_ECB,NULL);
-    /* set some interesting starting text */
-    for(i=0;i<16;i++)
-        ptbuf[i] = 0xaa;
-    for(i=1;i<41;i++) {
-        blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
-        fprintf(fp,"\n\nI=%d\n",i);
-        fprintf(fp,"KEY=00000000000000000000000000000000");
-        fprintf(fp,"0000000000000000\n");
-        fprintf(fp,"PT=");
-        for(k=0;k<16;k++)
-            fprintf(fp,"%c%c",tohex[ptbuf[k]>>4],tohex[ptbuf[k]&0x0f]);
-        fprintf(fp,"\nCT=");
-        for(k=0;k<16;k++){
-            fprintf(fp,"%c%c",tohex[ctbuf[k]>>4],tohex[ctbuf[k]&0x0f]);
-        }
-        for(j=0;j<16;j++)
-            ptbuf[j] = ctbuf[j];
-    }
+/* 128 bit keys */
+file << "\n\n==========\n\nKEYSIZE=128\n";
+makeKey(&keyin,DIR_ENCRYPT,128,akey);
+cipherInit(&encipher,MODE_ECB,NULL);
+/* set some interesting starting text */
+for(int i=0;i<16;i++)
+    ptbuf[i] = 0;
+for(int i=1;i<41;i++) {
+    blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
+    file << "\n\nI=" << i << "\n";
+    file << "KEY=00000000000000000000000000000000\n";
+    file << "PT=";
+    for(int k=0;k<16;k++)
+        file << hex << setw(2) << setfill('0') << static_cast<int>(ptbuf[k]);
+    file << "\nCT=";
+    for(int k=0;k<16;k++)
+        file << hex << setw(2) << setfill('0') << static_cast<int>(ctbuf[k]);
+    for(int j=0;j<16;j++)
+        ptbuf[j] = ctbuf[j];
+}
+/* 192 bit keys */
+file << "\n\n==========\n\nKEYSIZE=192\n";
+makeKey(&keyin,DIR_ENCRYPT,192,akey);
+cipherInit(&encipher,MODE_ECB,NULL);
+/* set some interesting starting text */
+for(int i=0;i<16;i++)
+    ptbuf[i] = 0xaa;
+for(int i=1;i<41;i++) {
+    blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
+    file << "\n\nI=" << i << "\n";
+    file << "KEY=00000000000000000000000000000000";
+    file << "0000000000000000\n";
+    file << "PT=";
+    for(int k=0;k<16;k++)
+        file << hex << setw(2) << setfill('0') << static_cast<int>(ptbuf[k]);
+    file << "\nCT=";
+    for(int k=0;k<16;k++)
+        file << hex << setw(2) << setfill('0') << static_cast<int>(ctbuf[k]);
+    for(int j=0;j<16;j++)
+        ptbuf[j] = ctbuf[j];
+}
     /* 256 bit keys */
-    fprintf(fp,"\n\n==========\n\nKEYSIZE=256");
+    file << "\n\n==========\n\nKEYSIZE=256\n";
     makeKey(&keyin,DIR_ENCRYPT,256,akey);
     cipherInit(&encipher,MODE_ECB,NULL);
     /* set some interesting starting text */
-    for(i=0;i<16;i++)
+    for(int i=0;i<16;i++)
         ptbuf[i] = S[i]&0xff;
-    for(i=1;i<41;i++) {
+    for(int i=1;i<41;i++) {
         blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
-        fprintf(fp,"\n\nI=%d\n",i);
-        fprintf(fp,"KEY=00000000000000000000000000000000");
-        fprintf(fp,"00000000000000000000000000000000\n");
-        fprintf(fp,"PT=");
-        for(k=0;k<16;k++)
-            fprintf(fp,"%c%c",tohex[ptbuf[k]>>4],tohex[ptbuf[k]&0x0f]);
-        fprintf(fp,"\nCT=");
-        for(k=0;k<16;k++){
-            fprintf(fp,"%c%c",tohex[ctbuf[k]>>4],tohex[ctbuf[k]&0x0f]);
-        }
-        for(j=0;j<16;j++)
+        file << "\n\nI=" << i << "\n";
+        file << "KEY=00000000000000000000000000000000";
+        file << "00000000000000000000000000000000\n";
+        file << "PT=";
+        for(int k=0;k<16;k++)
+            file << hex << setw(2) << setfill('0') << static_cast<int>(ptbuf[k]);
+        file << "\nCT=";
+        for(int k=0;k<16;k++)
+            file << hex << setw(2) << setfill('0') << static_cast<int>(ctbuf[k]);
+        for(int j=0;j<16;j++)
             ptbuf[j] = ctbuf[j];
     }
-    fprintf(fp,"\n==========\n");
-    fclose(fp);
+    file << "\n==========\n";
+    file.close();
 #endif /* KAT */
-
+    ////////////////////////////////////////////////////////////////////////////////////////
 #ifdef MCT
     /*************************************************************************
      *
      * ECB Encrypt MCT -> ecb_e_m.txt
      *
      ************************************************************************/
-    fp = fopen("ecb_e_m.txt","w");
-    fprintf(fp,"=========================\n\n");
-    fprintf(fp,"FILENAME:  \"ecb_e_m.txt\"\n\n");
-    fprintf(fp,"Electronic Codebook (ECB) Mode - ENCRYPTION\n");
-    fprintf(fp,"Monte Carlo Test\n\n");
-    fprintf(fp,"Algorithm Name: Mars\n");
-    fprintf(fp,"Principle Submitter: IBM");
+    ofstream file("ecb_e_m.txt");
+    file << "=========================\n\n";
+    file << "FILENAME:  \"ecb_e_m.txt\"\n\n";
+    file << "Electronic Codebook (ECB) Mode - ENCRYPTION\n";
+    file << "Monte Carlo Test\n\n";
+    file << "Algorithm Name: Mars\n";
+    file << "Principle Submitter: IBM\n";
 
     /* 128 bit keys */
-    fprintf(fp,"\n\n=========================\n\nKEYSIZE=128");
+    file << "\n\n=========================\n\nKEYSIZE=128\n";
     /* the starting key and PT are all zeros */
-    for(i=0;i<64;i++)
+    for(int i=0;i<64;i++)
         akey[i] = '0';
     akey[64] = '\0';
-    for(i=0;i<16;i++)
+    for(int i=0;i<16;i++)
         ptbuf[i] = 0;
     cipherInit(&encipher,MODE_ECB,NULL);
-    for(i=0;i<400;i++) {
+    for(int i=0;i<400;i++) {
         makeKey(&keyin,DIR_ENCRYPT,128,akey);
-        fprintf(fp,"\n\nI=%d\n",i);
-        fprintf(fp,"KEY=");
-        for(k=0;k<32;k++)
-            fprintf(fp,"%c",akey[k]);
-        fprintf(fp,"\nPT=");
-        for(k=0;k<16;k++)
-            fprintf(fp,"%c%c",tohex[ptbuf[k]>>4],tohex[ptbuf[k]&0x0f]);
-        for(k=0;k<5000;k++){
+        file << "\n\nI=" << i << "\n";
+        file << "KEY=";
+        for(int k=0;k<32;k++)
+            file << akey[k];
+        file << "\nPT=";
+        for(int k=0;k<16;k++)
+            file << tohex[ptbuf[k]>>4] << tohex[ptbuf[k]&0x0f];
+        for(int k=0;k<5000;k++){
             blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
             blockEncrypt(&encipher, &keyin, ctbuf, 128, ptbuf);
         }
-        fprintf(fp,"\nCT=");
-        for(k=0;k<16;k++){
-            fprintf(fp,"%c%c",tohex[ptbuf[k]>>4],tohex[ptbuf[k]&0x0f]);
+        file << "\nCT=";
+        for(int k=0;k<16;k++){
+            file << tohex[ptbuf[k]>>4] << tohex[ptbuf[k]&0x0f];
         }
-        for(k=0;k<16;k++){
+        for(int k=0;k<16;k++){
             akey[2*k] = tohex[hex[(int)akey[2*k]] ^ (ptbuf[k]>>4)];
             akey[2*k+1] = tohex[(int)hex[(int)akey[2*k+1]] ^ (ptbuf[k] & 0x0f)];
         }
     }
     /* 192 bit keys */
-    fprintf(fp,"\n\n=========================\n\nKEYSIZE=192");
+    file << "\n\n=========================\n\nKEYSIZE=192\n";
     /* the starting key and PT are all zeros */
-    for(i=0;i<64;i++)
+    for(int i=0;i<64;i++)
         akey[i] = '0';
     akey[64] = '\0';
-    for(i=0;i<16;i++)
+    for(int i=0;i<16;i++)
         ptbuf[i] = 0;
     cipherInit(&encipher,MODE_ECB,NULL);
-    for(i=0;i<400;i++) {
+    for(int i=0;i<400;i++) {
         makeKey(&keyin,DIR_ENCRYPT,192,akey);
-        fprintf(fp,"\n\nI=%d\n",i);
-        fprintf(fp,"KEY=");
-        for(k=0;k<48;k++)
-            fprintf(fp,"%c",akey[k]);
-        fprintf(fp,"\nPT=");
-        for(k=0;k<16;k++)
-            fprintf(fp,"%c%c",tohex[ptbuf[k]>>4],tohex[ptbuf[k]&0x0f]);
-        for(k=0;k<5000;k++){
+        file << "\n\nI=" << i << "\n";
+        file << "KEY=";
+        for(int k=0;k<48;k++)
+            file << akey[k];
+        file << "\nPT=";
+        for(int k=0;k<16;k++)
+            file << tohex[ptbuf[k]>>4] << tohex[ptbuf[k]&0x0f];
+        for(int k=0;k<5000;k++){
             blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
             blockEncrypt(&encipher, &keyin, ctbuf, 128, ptbuf);
         }
         /* ptbuf contains the last CT, and ctbuf has the prior... */
-        fprintf(fp,"\nCT=");
-        for(k=0;k<16;k++){
-            fprintf(fp,"%c%c",tohex[ptbuf[k]>>4],tohex[ptbuf[k]&0x0f]);
+        file << "\nCT=";
+        for(int k=0;k<16;k++){
+            file << tohex[ptbuf[k]>>4] << tohex[ptbuf[k]&0x0f];
         }
         /* the first 64 bits come from the end of ctbuf, and
          * the remaining 128 bits from ptbuf (CT9999, and CT9998)
          */
-        for(k=0;k<8;k++) {
+        for(int k=0;k<8;k++) {
             akey[2*k] = tohex[hex[(int)akey[2*k]] ^ (ctbuf[k+8]>>4)];
             akey[2*k+1] = tohex[hex[(int)akey[2*k+1]] ^ (ctbuf[k+8] & 0x0f)];
         }
-        for(k=0;k<16;k++){
+        for(int k=0;k<16;k++){
             akey[2*k+16] = tohex[hex[(int)akey[2*k+16]]^(ptbuf[k]>>4)];
             akey[2*k+17] = tohex[(int)hex[(int)akey[2*k+17]]^(ptbuf[k]&0x0f)];
         }
     }
     /* 256 bit keys */
-    fprintf(fp,"\n\n=========================\n\nKEYSIZE=256");
+    file << "\n\n=========================\n\nKEYSIZE=256\n";
     /* the starting key and PT are all zeros */
-    for(i=0;i<64;i++)
+    for(int i=0;i<64;i++)
         akey[i] = '0';
     akey[64] = '\0';
-    for(i=0;i<16;i++)
+    for(int i=0;i<16;i++)
         ptbuf[i] = 0;
     cipherInit(&encipher,MODE_ECB,NULL);
-    for(i=0;i<400;i++) {
+    for(int i=0;i<400;i++) {
         makeKey(&keyin,DIR_ENCRYPT,256,akey);
-        fprintf(fp,"\n\nI=%d\n",i);
-        fprintf(fp,"KEY=");
-        for(k=0;k<64;k++)
-            fprintf(fp,"%c",akey[k]);
-        fprintf(fp,"\nPT=");
-        for(k=0;k<16;k++)
-            fprintf(fp,"%c%c",tohex[ptbuf[k]>>4],tohex[ptbuf[k]&0x0f]);
-        for(k=0;k<5000;k++){
+        file << "\n\nI=" << i << "\n";
+        file << "KEY=";
+        for(int k=0;k<64;k++)
+            file << akey[k];
+        file << "\nPT=";
+        for(int k=0;k<16;k++)
+            file << tohex[ptbuf[k]>>4] << tohex[ptbuf[k]&0x0f];
+        for(int k=0;k<5000;k++){
             blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
             blockEncrypt(&encipher, &keyin, ctbuf, 128, ptbuf);
         }
         /* ptbuf contains the last CT, and ctbuf has the prior... */
-        fprintf(fp,"\nCT=");
-        for(k=0;k<16;k++){
-            fprintf(fp,"%c%c",tohex[ptbuf[k]>>4],tohex[ptbuf[k]&0x0f]);
+        file << "\nCT=";
+        for(int k=0;k<16;k++){
+            file << tohex[ptbuf[k]>>4] << tohex[ptbuf[k]&0x0f];
         }
         /* the first 128 bits come from ctbuf, and
          * the remaining 128 bits from ptbuf (CT9999, and CT9998)
          */
-        for(k=0;k<16;k++) {
+        for(int k=0;k<16;k++) {
             akey[2*k] = tohex[hex[(int)akey[2*k]] ^ (ctbuf[k]>>4)];
             akey[2*k+1] = tohex[hex[(int)akey[2*k+1]] ^ (ctbuf[k] & 0x0f)];
             akey[2*k+32] = tohex[hex[(int)akey[2*k+32]]^(ptbuf[k]>>4)];
             akey[2*k+33] = tohex[(int)hex[(int)akey[2*k+33]]^(ptbuf[k]&0x0f)];
         }
     }
-    fprintf(fp,"\n==========\n");
-    fclose(fp);
+    file << "\n==========\n";
+    file.close();
 
-    /*************************************************************************
-     *
-     * ECB Decrypt MCT -> ecb_d_m.txt
-     *
-     ************************************************************************/
-    fp = fopen("ecb_d_m.txt","w");
-    fprintf(fp,"=========================\n\n");
-    fprintf(fp,"FILENAME:  \"ecb_d_m.txt\"\n\n");
-    fprintf(fp,"Electronic Codebook (ECB) Mode - DECRYPTION\n");
-    fprintf(fp,"Monte Carlo Test\n\n");
-    fprintf(fp,"Algorithm Name: Mars\n");
-    fprintf(fp,"Principle Submitter: IBM");
+/*************************************************************************
+ *
+ * ECB Decrypt MCT -> ecb_d_m.txt
+ *
+ ************************************************************************/
+ofstream file("ecb_d_m.txt");
+file << "=========================\n\n";
+file << "FILENAME:  \"ecb_d_m.txt\"\n\n";
+file << "Electronic Codebook (ECB) Mode - DECRYPTION\n";
+file << "Monte Carlo Test\n\n";
+file << "Algorithm Name: Mars\n";
+file << "Principle Submitter: IBM\n";
 
-    /* 128 bit keys */
-    fprintf(fp,"\n\n=========================\n\nKEYSIZE=128");
-    /* the starting key and PT are all zeros */
-    for(i=0;i<64;i++)
-        akey[i] = '0';
-    akey[64] = '\0';
-    for(i=0;i<16;i++)
-        ptbuf[i] = 0;
-    cipherInit(&decipher,MODE_ECB,NULL);
-    for(i=0;i<400;i++) {
-        makeKey(&keyin,DIR_DECRYPT,128,akey);
-        fprintf(fp,"\n\nI=%d\n",i);
-        fprintf(fp,"KEY=");
-        for(k=0;k<32;k++)
-            fprintf(fp,"%c",akey[k]);
-        fprintf(fp,"\nCT=");
-        for(k=0;k<16;k++)
-            fprintf(fp,"%c%c",tohex[ptbuf[k]>>4],tohex[ptbuf[k]&0x0f]);
-        for(k=0;k<5000;k++){
-            blockDecrypt(&decipher, &keyin, ptbuf, 128, ctbuf);
-            blockDecrypt(&decipher, &keyin, ctbuf, 128, ptbuf);
-        }
-        fprintf(fp,"\nPT=");
-        for(k=0;k<16;k++){
-            fprintf(fp,"%c%c",tohex[ptbuf[k]>>4],tohex[ptbuf[k]&0x0f]);
-        }
-        for(k=0;k<16;k++){
-            akey[2*k] = tohex[hex[(int)akey[2*k]] ^ (ptbuf[k]>>4)];
-            akey[2*k+1] = tohex[(int)hex[(int)akey[2*k+1]] ^ (ptbuf[k] & 0x0f)];
-        }
+/* 128 bit keys */
+file << "\n\n=========================\n\nKEYSIZE=128\n";
+/* the starting key and PT are all zeros */
+for(int i=0;i<64;i++)
+    akey[i] = '0';
+akey[64] = '\0';
+for(int i=0;i<16;i++)
+    ptbuf[i] = 0;
+cipherInit(&decipher,MODE_ECB,NULL);
+for(int i=0;i<400;i++) {
+    makeKey(&keyin,DIR_DECRYPT,128,akey);
+    file << "\n\nI=" << i << "\n";
+    file << "KEY=";
+    for(int k=0;k<32;k++)
+        file << akey[k];
+    file << "\nCT=";
+    for(int k=0;k<16;k++)
+        file << tohex[ptbuf[k]>>4] << tohex[ptbuf[k]&0x0f];
+    for(int k=0;k<5000;k++){
+        blockDecrypt(&decipher, &keyin, ptbuf, 128, ctbuf);
+        blockDecrypt(&decipher, &keyin, ctbuf, 128, ptbuf);
     }
-    /* 192 bit keys */
-    fprintf(fp,"\n\n=========================\n\nKEYSIZE=192");
-    /* the starting key and PT are all zeros */
-    for(i=0;i<64;i++)
-        akey[i] = '0';
-    akey[64] = '\0';
-    for(i=0;i<16;i++)
-        ptbuf[i] = 0;
-    cipherInit(&decipher,MODE_ECB,NULL);
-    for(i=0;i<400;i++) {
-        makeKey(&keyin,DIR_DECRYPT,192,akey);
-        fprintf(fp,"\n\nI=%d\n",i);
-        fprintf(fp,"KEY=");
-        for(k=0;k<48;k++)
-            fprintf(fp,"%c",akey[k]);
-        fprintf(fp,"\nCT=");
-        for(k=0;k<16;k++)
-            fprintf(fp,"%c%c",tohex[ptbuf[k]>>4],tohex[ptbuf[k]&0x0f]);
-        for(k=0;k<5000;k++){
-            blockDecrypt(&decipher, &keyin, ptbuf, 128, ctbuf);
-            blockDecrypt(&decipher, &keyin, ctbuf, 128, ptbuf);
-        }
-        /* ptbuf contains the last CT, and ctbuf has the prior... */
-        fprintf(fp,"\nPT=");
-        for(k=0;k<16;k++){
-            fprintf(fp,"%c%c",tohex[ptbuf[k]>>4],tohex[ptbuf[k]&0x0f]);
-        }
-        /* the first 64 bits come from the end of ctbuf, and
-         * the remaining 128 bits from ptbuf (CT9999, and CT9998)
-         */
-        for(k=0;k<8;k++) {
-            akey[2*k] = tohex[hex[(int)akey[2*k]] ^ (ctbuf[k+8]>>4)];
-            akey[2*k+1] = tohex[hex[(int)akey[2*k+1]] ^ (ctbuf[k+8] & 0x0f)];
-        }
-        for(k=0;k<16;k++){
-            akey[2*k+16] = tohex[hex[(int)akey[2*k+16]]^(ptbuf[k]>>4)];
-            akey[2*k+17] = tohex[(int)hex[(int)akey[2*k+17]]^(ptbuf[k]&0x0f)];
-        }
+    file << "\nPT=";
+    for(int k=0;k<16;k++){
+        file << tohex[ptbuf[k]>>4] << tohex[ptbuf[k]&0x0f];
     }
-    /* 256 bit keys */
-    fprintf(fp,"\n\n=========================\n\nKEYSIZE=256");
-    /* the starting key and PT are all zeros */
-    for(i=0;i<64;i++)
-        akey[i] = '0';
-    akey[64] = '\0';
-    for(i=0;i<16;i++)
-        ptbuf[i] = 0;
-    cipherInit(&decipher,MODE_ECB,NULL);
-    for(i=0;i<400;i++) {
-        makeKey(&keyin,DIR_DECRYPT,256,akey);
-        fprintf(fp,"\n\nI=%d\n",i);
-        fprintf(fp,"KEY=");
-        for(k=0;k<64;k++)
-            fprintf(fp,"%c",akey[k]);
-        fprintf(fp,"\nCT=");
-        for(k=0;k<16;k++)
-            fprintf(fp,"%c%c",tohex[ptbuf[k]>>4],tohex[ptbuf[k]&0x0f]);
-        for(k=0;k<5000;k++){
-            blockDecrypt(&decipher, &keyin, ptbuf, 128, ctbuf);
-            blockDecrypt(&decipher, &keyin, ctbuf, 128, ptbuf);
-        }
-        /* ptbuf contains the last CT, and ctbuf has the prior... */
-        fprintf(fp,"\nPT=");
-        for(k=0;k<16;k++){
-            fprintf(fp,"%c%c",tohex[ptbuf[k]>>4],tohex[ptbuf[k]&0x0f]);
-        }
-        /* the first 128 bits come from ctbuf, and
-         * the remaining 128 bits from ptbuf (CT9999, and CT9998)
-         */
-        for(k=0;k<16;k++) {
-            akey[2*k] = tohex[hex[(int)akey[2*k]] ^ (ctbuf[k]>>4)];
-            akey[2*k+1] = tohex[hex[(int)akey[2*k+1]] ^ (ctbuf[k] & 0x0f)];
-            akey[2*k+32] = tohex[hex[(int)akey[2*k+32]]^(ptbuf[k]>>4)];
-            akey[2*k+33] = tohex[(int)hex[(int)akey[2*k+33]]^(ptbuf[k]&0x0f)];
-        }
+    for(int k=0;k<16;k++){
+        akey[2*k] = tohex[hex[(int)akey[2*k]] ^ (ptbuf[k]>>4)];
+        akey[2*k+1] = tohex[hex[(int)akey[2*k+1]] ^ (ptbuf[k] & 0x0f)];
     }
-    fprintf(fp,"\n==========\n");
-    fclose(fp);
+}
+/* 192 bit keys */
+file << "\n\n=========================\n\nKEYSIZE=192\n";
+/* the starting key and PT are all zeros */
+for(int i=0;i<64;i++)
+    akey[i] = '0';
+akey[64] = '\0';
+for(int i=0;i<16;i++)
+    ptbuf[i] = 0;
+cipherInit(&decipher,MODE_ECB,NULL);
+for(int i=0;i<400;i++) {
+    makeKey(&keyin,DIR_DECRYPT,192,akey);
+    file << "\n\nI=" << i << "\n";
+    file << "KEY=";
+    for(int k=0;k<48;k++)
+        file << akey[k];
+    file << "\nCT=";
+    for(int k=0;k<16;k++)
+        file << tohex[ptbuf[k]>>4] << tohex[ptbuf[k]&0x0f];
+    for(int k=0;k<5000;k++){
+        blockDecrypt(&decipher, &keyin, ptbuf, 128, ctbuf);
+        blockDecrypt(&decipher, &keyin, ctbuf, 128, ptbuf);
+    }
+    /* ptbuf contains the last CT, and ctbuf has the prior... */
+    file << "\nPT=";
+    for(int k=0;k<16;k++){
+        file << tohex[ptbuf[k]>>4] << tohex[ptbuf[k]&0x0f];
+    }
+    /* the first 64 bits come from the end of ctbuf, and
+     * the remaining 128 bits from ptbuf (CT9999, and CT9998)
+     */
+    for(int k=0;k<8;k++) {
+        akey[2*k] = tohex[hex[(int)akey[2*k]] ^ (ctbuf[k+8]>>4)];
+        akey[2*k+1] = tohex[hex[(int)akey[2*k+1]] ^ (ctbuf[k+8] & 0x0f)];
+    }
+    for(int k=0;k<16;k++){
+        akey[2*k+16] = tohex[hex[(int)akey[2*k+16]]^(ptbuf[k]>>4)];
+        akey[2*k+17] = tohex[hex[(int)akey[2*k+17]]^(ptbuf[k]&0x0f)];
+    }
+}
+/* 256 bit keys */
+file << "\n\n=========================\n\nKEYSIZE=256\n";
+/* the starting key and PT are all zeros */
+for(int i=0;i<64;i++)
+    akey[i] = '0';
+akey[64] = '\0';
+for(int i=0;i<16;i++)
+    ptbuf[i] = 0;
+cipherInit(&decipher,MODE_ECB,NULL);
+for(int i=0;i<400;i++) {
+    makeKey(&keyin,DIR_DECRYPT,256,akey);
+    file << "\n\nI=" << i << "\n";
+    file << "KEY=";
+    for(int k=0;k<64;k++)
+        file << akey[k];
+    file << "\nCT=";
+    for(int k=0;k<16;k++)
+        file << tohex[ptbuf[k]>>4] << tohex[ptbuf[k]&0x0f];
+    for(int k=0;k<5000;k++){
+        blockDecrypt(&decipher, &keyin, ptbuf, 128, ctbuf);
+        blockDecrypt(&decipher, &keyin, ctbuf, 128, ptbuf);
+    }
+    /* ptbuf contains the last CT, and ctbuf has the prior... */
+    file << "\nPT=";
+    for(int k=0;k<16;k++){
+        file << tohex[ptbuf[k]>>4] << tohex[ptbuf[k]&0x0f];
+    }
+    /* the first 128 bits come from ctbuf, and
+     * the remaining 128 bits from ptbuf (CT9999, and CT9998)
+     */
+    for(int k=0;k<16;k++) {
+        akey[2*k] = tohex[hex[(int)akey[2*k]] ^ (ctbuf[k]>>4)];
+        akey[2*k+1] = tohex[hex[(int)akey[2*k+1]] ^ (ctbuf[k] & 0x0f)];
+        akey[2*k+32] = tohex[hex[(int)akey[2*k+32]]^(ptbuf[k]>>4)];
+        akey[2*k+33] = tohex[hex[(int)akey[2*k+33]]^(ptbuf[k]&0x0f)];
+    }
+}
+file << "\n==========\n";
+file.close();
+/*************************************************************************
+ *
+ * CBC Encrypt MCT -> cbc_e_m.txt
+ *
+ ************************************************************************/
+ofstream file("cbc_e_m.txt");
+file << "=========================\n\n";
+file << "FILENAME:  \"cbc_e_m.txt\"\n\n";
+file << "Cipher Block Chaining (CBC) Mode - ENCRYPTION\n";
+file << "Monte Carlo Test\n\n";
+file << "Algorithm Name: Mars\n";
+file << "Principle Submitter: IBM\n";
 
-    /*************************************************************************
-     *
-     * CBC Encrypt MCT -> cbc_e_m.txt
-     *
-     ************************************************************************/
-    fp = fopen("cbc_e_m.txt","w");
-    fprintf(fp,"=========================\n\n");
-    fprintf(fp,"FILENAME:  \"cbc_e_m.txt\"\n\n");
-    fprintf(fp,"Cipher Block Chaining (CBC) Mode - ENCRYPTION\n");
-    fprintf(fp,"Monte Carlo Test\n\n");
-    fprintf(fp,"Algorithm Name: Mars\n");
-    fprintf(fp,"Principle Submitter: IBM");
-
-    /* 128 bit keys */
-    fprintf(fp,"\n\n==========\n\nKEYSIZE=128");
-    /* the starting key, IV, and PT are all zeros */
-    for(i=0;i<64;i++)
-        akey[i] = '0';
-    akey[64] = '\0';
-    for(i=0;i<16;i++){
-        ptbuf[i] = 0;
-        ivbuf[i] = 0;
-    }
-    /* we will do CBC manually */
-    cipherInit(&encipher,MODE_ECB,NULL);
-    for(i=0;i<400;i++) {
-        makeKey(&keyin,DIR_ENCRYPT,128,akey);
-        fprintf(fp,"\n\nI=%d\n",i);
-        fprintf(fp,"KEY=");
-        for(k=0;k<32;k++)
-            fprintf(fp,"%c",akey[k]);
-        fprintf(fp,"\nIV=");
-        for(k=0;k<16;k++)
-            fprintf(fp,"%c%c",tohex[ivbuf[k]>>4],tohex[ivbuf[k]&0x0f]);
-        fprintf(fp,"\nPT=");
-        for(k=0;k<16;k++)
-            fprintf(fp,"%c%c",tohex[ptbuf[k]>>4],tohex[ptbuf[k]&0x0f]);
-        for(k=0;k<10000;k++){
-            for(j=0;j<16;j++)
-                ptbuf[j] ^= ivbuf[j];
-            blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
-            for(j=0;j<16;j++){
-                ptbuf[j] = ivbuf[j];
-                ivbuf[j] = ctbuf[j];
-            }
-        }
-        fprintf(fp,"\nCT=");
-        for(k=0;k<16;k++){
-            fprintf(fp,"%c%c",tohex[ctbuf[k]>>4],tohex[ctbuf[k]&0x0f]);
-        }
-        for(k=0;k<16;k++){
-            akey[2*k] = tohex[hex[(int)akey[2*k]] ^ (ctbuf[k]>>4)];
-            akey[2*k+1] = tohex[(int)hex[(int)akey[2*k+1]] ^ (ctbuf[k] & 0x0f)];
+/* 128 bit keys */
+file << "\n\n==========\n\nKEYSIZE=128\n";
+/* the starting key, IV, and PT are all zeros */
+for(int i=0;i<64;i++)
+    akey[i] = '0';
+akey[64] = '\0';
+for(int i=0;i<16;i++){
+    ptbuf[i] = 0;
+    ivbuf[i] = 0;
+}
+/* we will do CBC manually */
+cipherInit(&encipher,MODE_ECB,NULL);
+for(int i=0;i<400;i++) {
+    makeKey(&keyin,DIR_ENCRYPT,128,akey);
+    file << "\n\nI=" << i << "\n";
+    file << "KEY=";
+    for(int k=0;k<32;k++)
+        file << akey[k];
+    file << "\nIV=";
+    for(int k=0;k<16;k++)
+        file << tohex[ivbuf[k]>>4] << tohex[ivbuf[k]&0x0f];
+    file << "\nPT=";
+    for(int k=0;k<16;k++)
+        file << tohex[ptbuf[k]>>4] << tohex[ptbuf[k]&0x0f];
+    for(int k=0;k<10000;k++){
+        for(int j=0;j<16;j++)
+            ptbuf[j] ^= ivbuf[j];
+        blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
+        for(int j=0;j<16;j++){
+            ptbuf[j] = ivbuf[j];
+            ivbuf[j] = ctbuf[j];
         }
     }
-    /* 192 bit keys */
-    fprintf(fp,"\n\n==========\n\nKEYSIZE=192");
-    /* the starting key, IV, and PT are all zeros */
-    for(i=0;i<64;i++)
-        akey[i] = '0';
-    akey[64] = '\0';
-    for(i=0;i<16;i++){
-        ptbuf[i] = 0;
-        ivbuf[i] = 0;
+    file << "\nCT=";
+    for(int k=0;k<16;k++){
+        file << tohex[ctbuf[k]>>4] << tohex[ctbuf[k]&0x0f];
     }
-    /* we will do CBC manually */
-    cipherInit(&encipher,MODE_ECB,NULL);
-    for(i=0;i<400;i++) {
-        makeKey(&keyin,DIR_ENCRYPT,192,akey);
-        fprintf(fp,"\n\nI=%d\n",i);
-        fprintf(fp,"KEY=");
-        for(k=0;k<48;k++)
-            fprintf(fp,"%c",akey[k]);
-        fprintf(fp,"\nIV=");
-        for(k=0;k<16;k++)
-            fprintf(fp,"%c%c",tohex[ivbuf[k]>>4],tohex[ivbuf[k]&0x0f]);
-        fprintf(fp,"\nPT=");
-        for(k=0;k<16;k++)
-            fprintf(fp,"%c%c",tohex[ptbuf[k]>>4],tohex[ptbuf[k]&0x0f]);
-        for(k=0;k<10000;k++){
-            for(j=0;j<16;j++)
-                ptbuf[j] ^= ivbuf[j];
-            blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
-            for(j=0;j<16;j++){
-                ptbuf[j] = ivbuf[j];
-                ivbuf[j] = ctbuf[j];
-            }
-        }
-        fprintf(fp,"\nCT=");
-        for(k=0;k<16;k++){
-            fprintf(fp,"%c%c",tohex[ctbuf[k]>>4],tohex[ctbuf[k]&0x0f]);
-        }
-        /* the first 64 bits come from the end of ivbuf, and
-         * the remaining 128 bits from ctbuf (CT9999, and CT9998)
-         */
-        for(k=0;k<8;k++) {
-            akey[2*k] = tohex[hex[(int)akey[2*k]] ^ (ptbuf[k+8]>>4)];
-            akey[2*k+1] = tohex[hex[(int)akey[2*k+1]] ^ (ptbuf[k+8] & 0x0f)];
-        }
-        for(k=0;k<16;k++){
-            akey[2*k+16] = tohex[hex[(int)akey[2*k+16]]^(ctbuf[k]>>4)];
-            akey[2*k+17] = tohex[(int)hex[(int)akey[2*k+17]]^(ctbuf[k]&0x0f)];
+    for(int k=0;k<16;k++){
+        akey[2*k] = tohex[hex[(int)akey[2*k]] ^ (ctbuf[k]>>4)];
+        akey[2*k+1] = tohex[hex[(int)akey[2*k+1]] ^ (ctbuf[k] & 0x0f)];
+    }
+}
+/* 192 bit keys */
+file << "\n\n==========\n\nKEYSIZE=192\n";
+/* the starting key, IV, and PT are all zeros */
+for(int i=0;i<64;i++)
+    akey[i] = '0';
+akey[64] = '\0';
+for(int i=0;i<16;i++){
+    ptbuf[i] = 0;
+    ivbuf[i] = 0;
+}
+/* we will do CBC manually */
+cipherInit(&encipher,MODE_ECB,NULL);
+for(int i=0;i<400;i++) {
+    makeKey(&keyin,DIR_ENCRYPT,192,akey);
+    file << "\n\nI=" << i << "\n";
+    file << "KEY=";
+    for(int k=0;k<48;k++)
+        file << akey[k];
+    file << "\nIV=";
+    for(int k=0;k<16;k++)
+        file << tohex[ivbuf[k]>>4] << tohex[ivbuf[k]&0x0f];
+    file << "\nPT=";
+    for(int k=0;k<16;k++)
+        file << tohex[ptbuf[k]>>4] << tohex[ptbuf[k]&0x0f];
+    for(int k=0;k<10000;k++){
+        for(int j=0;j<16;j++)
+            ptbuf[j] ^= ivbuf[j];
+        blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
+        for(int j=0;j<16;j++){
+            ptbuf[j] = ivbuf[j];
+            ivbuf[j] = ctbuf[j];
         }
     }
-    /* 256 bit keys */
-    fprintf(fp,"\n\n==========\n\nKEYSIZE=256");
-    /* the starting key, IV, and PT are all zeros */
-    for(i=0;i<64;i++)
-        akey[i] = '0';
-    akey[64] = '\0';
-    for(i=0;i<16;i++){
-        ptbuf[i] = 0;
-        ivbuf[i] = 0;
+    file << "\nCT=";
+    for(int k=0;k<16;k++){
+        file << tohex[ctbuf[k]>>4] << tohex[ctbuf[k]&0x0f];
     }
-    /* we will do CBC manually */
-    cipherInit(&encipher,MODE_ECB,NULL);
-    for(i=0;i<400;i++) {
-        makeKey(&keyin,DIR_ENCRYPT,256,akey);
-        fprintf(fp,"\n\nI=%d\n",i);
-        fprintf(fp,"KEY=");
-        for(k=0;k<64;k++)
-            fprintf(fp,"%c",akey[k]);
-        fprintf(fp,"\nIV=");
-        for(k=0;k<16;k++)
-            fprintf(fp,"%c%c",tohex[ivbuf[k]>>4],tohex[ivbuf[k]&0x0f]);
-        fprintf(fp,"\nPT=");
-        for(k=0;k<16;k++)
-            fprintf(fp,"%c%c",tohex[ptbuf[k]>>4],tohex[ptbuf[k]&0x0f]);
-        for(k=0;k<10000;k++){
-            for(j=0;j<16;j++)
-                ptbuf[j] ^= ivbuf[j];
-            blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
-            for(j=0;j<16;j++){
-                ptbuf[j] = ivbuf[j];
-                ivbuf[j] = ctbuf[j];
-            }
-        }
-        fprintf(fp,"\nCT=");
-        for(k=0;k<16;k++){
-            fprintf(fp,"%c%c",tohex[ctbuf[k]>>4],tohex[ctbuf[k]&0x0f]);
-        }
-        /* the first 128 bits come from ctbuf, and
-         * the remaining 128 bits from ptbuf (CT9999, and CT9998)
-         */
-        for(k=0;k<16;k++) {
-            akey[2*k] = tohex[hex[(int)akey[2*k]] ^ (ptbuf[k]>>4)];
-            akey[2*k+1] = tohex[hex[(int)akey[2*k+1]] ^ (ptbuf[k] & 0x0f)];
-            akey[2*k+32] = tohex[hex[(int)akey[2*k+32]]^(ctbuf[k]>>4)];
-            akey[2*k+33] = tohex[(int)hex[(int)akey[2*k+33]]^(ctbuf[k]&0x0f)];
+    /* the first 64 bits come from the end of ivbuf, and
+     * the remaining 128 bits from ctbuf (CT9999, and CT9998)
+     */
+    for(int k=0;k<8;k++) {
+        akey[2*k] = tohex[hex[(int)akey[2*k]] ^ (ptbuf[k+8]>>4)];
+        akey[2*k+1] = tohex[hex[(int)akey[2*k+1]] ^ (ptbuf[k+8] & 0x0f)];
+    }
+    for(int k=0;k<16;k++){
+        akey[2*k+16] = tohex[hex[(int)akey[2*k+16]]^(ctbuf[k]>>4)];
+        akey[2*k+17] = tohex[(int)hex[(int)akey[2*k+17]]^(ctbuf[k]&0x0f)];
+    }
+}
+/* 256 bit keys */
+file << "\n\n==========\n\nKEYSIZE=256\n";
+/* the starting key, IV, and PT are all zeros */
+for(int i=0;i<64;i++)
+    akey[i] = '0';
+akey[64] = '\0';
+for(int i=0;i<16;i++){
+    ptbuf[i] = 0;
+    ivbuf[i] = 0;
+}
+/* we will do CBC manually */
+cipherInit(&encipher,MODE_ECB,NULL);
+for(int i=0;i<400;i++) {
+    makeKey(&keyin,DIR_ENCRYPT,256,akey);
+    file << "\n\nI=" << i << "\n";
+    file << "KEY=";
+    for(int k=0;k<64;k++)
+        file << akey[k];
+    file << "\nIV=";
+    for(int k=0;k<16;k++)
+        file << tohex[ivbuf[k]>>4] << tohex[ivbuf[k]&0x0f];
+    file << "\nPT=";
+    for(int k=0;k<16;k++)
+        file << tohex[ptbuf[k]>>4] << tohex[ptbuf[k]&0x0f];
+    for(int k=0;k<10000;k++){
+        for(int j=0;j<16;j++)
+            ptbuf[j] ^= ivbuf[j];
+        blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
+        for(int j=0;j<16;j++){
+            ptbuf[j] = ivbuf[j];
+            ivbuf[j] = ctbuf[j];
         }
     }
-    fprintf(fp,"\n==========\n");
-    fclose(fp);
-
+    file << "\nCT=";
+    for(int k=0;k<16;k++){
+        file << tohex[ctbuf[k]>>4] << tohex[ctbuf[k]&0x0f];
+    }
+    /* the first 128 bits come from ctbuf, and
+     * the remaining 128 bits from ptbuf (CT9999, and CT9998)
+     */
+    for(int k=0;k<16;k++) {
+        akey[2*k] = tohex[hex[(int)akey[2*k]] ^ (ptbuf[k]>>4)];
+        akey[2*k+1] = tohex[hex[(int)akey[2*k+1]] ^ (ptbuf[k] & 0x0f)];
+        akey[2*k+32] = tohex[hex[(int)akey[2*k+32]]^(ctbuf[k]>>4)];
+        akey[2*k+33] = tohex[(int)hex[(int)akey[2*k+33]]^(ctbuf[k]&0x0f)];
+    }
+}
+file << "\n==========\n";
+file.close();
     /*************************************************************************
      *
      * CBC Decrypt MCT -> cbc_d_m.txt
      *
      ************************************************************************/
-    fp = fopen("cbc_d_m.txt","w");
-    fprintf(fp,"=========================\n\n");
-    fprintf(fp,"FILENAME:  \"cbc_d_m.txt\"\n\n");
-    fprintf(fp,"Cipher Block Chaining (CBC) Mode - DECRYPTION\n");
-    fprintf(fp,"Monte Carlo Test\n\n");
-    fprintf(fp,"Algorithm Name: Mars\n");
-    fprintf(fp,"Principle Submitter: IBM");
+ofstream file("cbc_d_m.txt");
+file << "=========================\n\n";
+file << "FILENAME:  \"cbc_d_m.txt\"\n\n";
+file << "Cipher Block Chaining (CBC) Mode - DECRYPTION\n";
+file << "Monte Carlo Test\n\n";
+file << "Algorithm Name: Mars\n";
+file << "Principle Submitter: IBM\n";
 
-    /* 128 bit keys */
-    fprintf(fp,"\n\n==========\n\nKEYSIZE=128");
-    /* the starting key, IV, and CT are all zeros */
-    for(i=0;i<64;i++)
-        akey[i] = '0';
-    akey[64] = '\0';
-    for(i=0;i<16;i++){
-        ctbuf[i] = 0;
-        ivbuf[i] = 0;
-    }
-    /* we will do CBC manually */
-    cipherInit(&decipher,MODE_ECB,NULL);
-    for(i=0;i<400;i++) {
-        makeKey(&keyin,DIR_DECRYPT,128,akey);
-        fprintf(fp,"\n\nI=%d\n",i);
-        fprintf(fp,"KEY=");
-        for(k=0;k<32;k++)
-            fprintf(fp,"%c",akey[k]);
-        fprintf(fp,"\nIV=");
-        for(k=0;k<16;k++)
-            fprintf(fp,"%c%c",tohex[ivbuf[k]>>4],tohex[ivbuf[k]&0x0f]);
-        fprintf(fp,"\nCT=");
-        for(k=0;k<16;k++)
-            fprintf(fp,"%c%c",tohex[ctbuf[k]>>4],tohex[ctbuf[k]&0x0f]);
-        for(k=0;k<10000;k++){
-            blockDecrypt(&decipher, &keyin, ctbuf, 128, ptbuf);
-            for(j=0;j<16;j++)
-                ptbuf[j] ^= ivbuf[j];
-            for(j=0;j<16;j++){
-                ivbuf[j] = ctbuf[j];
-                ctbuf[j] = ptbuf[j];
-            }
-        }
-        fprintf(fp,"\nPT=");
-        for(k=0;k<16;k++){
-            fprintf(fp,"%c%c",tohex[ptbuf[k]>>4],tohex[ptbuf[k]&0x0f]);
-        }
-        for(k=0;k<16;k++){
-            akey[2*k] = tohex[hex[(int)akey[2*k]] ^ (ptbuf[k]>>4)];
-            akey[2*k+1] = tohex[(int)hex[(int)akey[2*k+1]] ^ (ptbuf[k] & 0x0f)];
+/* 128 bit keys */
+file << "\n\n==========\n\nKEYSIZE=128\n";
+/* the starting key, IV, and CT are all zeros */
+for(int i=0;i<64;i++)
+    akey[i] = '0';
+akey[64] = '\0';
+for(int i=0;i<16;i++){
+    ctbuf[i] = 0;
+    ivbuf[i] = 0;
+}
+/* we will do CBC manually */
+cipherInit(&decipher,MODE_ECB,NULL);
+for(int i=0;i<400;i++) {
+    makeKey(&keyin,DIR_DECRYPT,128,akey);
+    file << "\n\nI=" << i << "\n";
+    file << "KEY=";
+    for(int k=0;k<32;k++)
+        file << akey[k];
+    file << "\nIV=";
+    for(int k=0;k<16;k++)
+        file << tohex[ivbuf[k]>>4] << tohex[ivbuf[k]&0x0f];
+    file << "\nCT=";
+    for(int k=0;k<16;k++)
+        file << tohex[ctbuf[k]>>4] << tohex[ctbuf[k]&0x0f];
+    for(int k=0;k<10000;k++){
+        blockDecrypt(&decipher, &keyin, ctbuf, 128, ptbuf);
+        for(int j=0;j<16;j++)
+            ptbuf[j] ^= ivbuf[j];
+        for(int j=0;j<16;j++){
+            ivbuf[j] = ctbuf[j];
+            ctbuf[j] = ptbuf[j];
         }
     }
-    /* 192 bit keys */
-    fprintf(fp,"\n\n==========\n\nKEYSIZE=192");
-    /* the starting key, IV, and CT are all zeros */
-    for(i=0;i<64;i++)
-        akey[i] = '0';
-    akey[64] = '\0';
-    for(i=0;i<16;i++){
-        ctbuf[i] = 0;
-        ivbuf[i] = 0;
+    file << "\nPT=";
+    for(int k=0;k<16;k++){
+        file << tohex[ptbuf[k]>>4] << tohex[ptbuf[k]&0x0f];
     }
-    /* we will do CBC manually */
-    cipherInit(&encipher,MODE_ECB,NULL);
-    for(i=0;i<400;i++) {
-        makeKey(&keyin,DIR_ENCRYPT,192,akey);
-        fprintf(fp,"\n\nI=%d\n",i);
-        fprintf(fp,"KEY=");
-        for(k=0;k<48;k++)
-            fprintf(fp,"%c",akey[k]);
-        fprintf(fp,"\nIV=");
-        for(k=0;k<16;k++)
-            fprintf(fp,"%c%c",tohex[ivbuf[k]>>4],tohex[ivbuf[k]&0x0f]);
-        fprintf(fp,"\nCT=");
-        for(k=0;k<16;k++)
-            fprintf(fp,"%c%c",tohex[ctbuf[k]>>4],tohex[ctbuf[k]&0x0f]);
-        for(k=0;k<10000;k++){
-            blockDecrypt(&decipher, &keyin, ctbuf, 128, ptbuf);
-            for(j=0;j<16;j++)
-                ptbuf[j] ^= ivbuf[j];
-            for(j=0;j<16;j++){
-                ivbuf[j] = ctbuf[j];
-                ctbuf[j] = ptbuf[j];
-            }
-        }
-        fprintf(fp,"\nPT=");
-        for(k=0;k<16;k++){
-            fprintf(fp,"%c%c",tohex[ptbuf[k]>>4],tohex[ptbuf[k]&0x0f]);
-        }
-        /* the first 64 bits come from the end of ivbuf, and
-         * the remaining 128 bits from ctbuf (CT9999, and CT9998)
-         */
-        for(k=0;k<8;k++) {
-            akey[2*k] = tohex[hex[(int)akey[2*k]] ^ (ivbuf[k+8]>>4)];
-            akey[2*k+1] = tohex[hex[(int)akey[2*k+1]] ^ (ivbuf[k+8] & 0x0f)];
-        }
-        for(k=0;k<16;k++){
-            akey[2*k+16] = tohex[hex[(int)akey[2*k+16]]^(ptbuf[k]>>4)];
-            akey[2*k+17] = tohex[(int)hex[(int)akey[2*k+17]]^(ptbuf[k]&0x0f)];
+    for(int k=0;k<16;k++){
+        akey[2*k] = tohex[hex[(int)akey[2*k]] ^ (ptbuf[k]>>4)];
+        akey[2*k+1] = tohex[(int)hex[(int)akey[2*k+1]] ^ (ptbuf[k] & 0x0f)];
+    }
+}
+/* 192 bit keys */
+file << "\n\n==========\n\nKEYSIZE=192\n";
+/* the starting key, IV, and CT are all zeros */
+for(int i=0;i<64;i++)
+    akey[i] = '0';
+akey[64] = '\0';
+for(int i=0;i<16;i++){
+    ctbuf[i] = 0;
+    ivbuf[i] = 0;
+}
+/* we will do CBC manually */
+cipherInit(&encipher,MODE_ECB,NULL);
+for(int i=0;i<400;i++) {
+    makeKey(&keyin,DIR_ENCRYPT,192,akey);
+    file << "\n\nI=" << i << "\n";
+    file << "KEY=";
+    for(int k=0;k<48;k++)
+        file << akey[k];
+    file << "\nIV=";
+    for(int k=0;k<16;k++)
+        file << tohex[ivbuf[k]>>4] << tohex[ivbuf[k]&0x0f];
+    file << "\nCT=";
+    for(int k=0;k<16;k++)
+        file << tohex[ctbuf[k]>>4] << tohex[ctbuf[k]&0x0f];
+    for(int k=0;k<10000;k++){
+        blockDecrypt(&decipher, &keyin, ctbuf, 128, ptbuf);
+        for(int j=0;j<16;j++)
+            ptbuf[j] ^= ivbuf[j];
+        for(int j=0;j<16;j++){
+            ivbuf[j] = ctbuf[j];
+            ctbuf[j] = ptbuf[j];
         }
     }
-    /* 256 bit keys */
-    fprintf(fp,"\n\n==========\n\nKEYSIZE=256");
-    /* the starting key, IV, and PT are all zeros */
-    for(i=0;i<64;i++)
-        akey[i] = '0';
-    akey[64] = '\0';
-    for(i=0;i<16;i++){
-        ctbuf[i] = 0;
-        ivbuf[i] = 0;
+    file << "\nPT=";
+    for(int k=0;k<16;k++){
+        file << tohex[ptbuf[k]>>4] << tohex[ptbuf[k]&0x0f];
     }
-    /* we will do CBC manually */
-    cipherInit(&encipher,MODE_ECB,NULL);
-    for(i=0;i<400;i++) {
-        makeKey(&keyin,DIR_ENCRYPT,256,akey);
-        fprintf(fp,"\n\nI=%d\n",i);
-        fprintf(fp,"KEY=");
-        for(k=0;k<64;k++)
-            fprintf(fp,"%c",akey[k]);
-        fprintf(fp,"\nIV=");
-        for(k=0;k<16;k++)
-            fprintf(fp,"%c%c",tohex[ivbuf[k]>>4],tohex[ivbuf[k]&0x0f]);
-        fprintf(fp,"\nCT=");
-        for(k=0;k<16;k++)
-            fprintf(fp,"%c%c",tohex[ctbuf[k]>>4],tohex[ctbuf[k]&0x0f]);
-        for(k=0;k<10000;k++){
-            blockDecrypt(&decipher, &keyin, ctbuf, 128, ptbuf);
-            for(j=0;j<16;j++)
-                ptbuf[j] ^= ivbuf[j];
-            for(j=0;j<16;j++){
-                ivbuf[j] = ctbuf[j];
-                ctbuf[j] = ptbuf[j];
-            }
-        }
-        fprintf(fp,"\nPT=");
-        for(k=0;k<16;k++){
-            fprintf(fp,"%c%c",tohex[ptbuf[k]>>4],tohex[ptbuf[k]&0x0f]);
-        }
-        /* the first 128 bits come from ctbuf, and
-         * the remaining 128 bits from ptbuf (CT9999, and CT9998)
-         */
-        for(k=0;k<16;k++) {
-            akey[2*k] = tohex[hex[(int)akey[2*k]] ^ (ivbuf[k]>>4)];
-            akey[2*k+1] = tohex[hex[(int)akey[2*k+1]] ^ (ivbuf[k] & 0x0f)];
-            akey[2*k+32] = tohex[hex[(int)akey[2*k+32]]^(ptbuf[k]>>4)];
-            akey[2*k+33] = tohex[(int)hex[(int)akey[2*k+33]]^(ptbuf[k]&0x0f)];
+    /* the first 64 bits come from the end of ivbuf, and
+     * the remaining 128 bits from ctbuf (CT9999, and CT9998)
+     */
+    for(int k=0;k<8;k++) {
+        akey[2*k] = tohex[hex[(int)akey[2*k]] ^ (ivbuf[k+8]>>4)];
+        akey[2*k+1] = tohex[hex[(int)akey[2*k+1]] ^ (ivbuf[k+8] & 0x0f)];
+    }
+    for(int k=0;k<16;k++){
+        akey[2*k+16] = tohex[hex[(int)akey[2*k+16]]^(ptbuf[k]>>4)];
+        akey[2*k+17] = tohex[(int)hex[(int)akey[2*k+17]]^(ptbuf[k]&0x0f)];
+    }
+}
+/* 256 bit keys */
+file << "\n\n==========\n\nKEYSIZE=256\n";
+/* the starting key, IV, and PT are all zeros */
+for(int i=0;i<64;i++)
+    akey[i] = '0';
+akey[64] = '\0';
+for(int i=0;i<16;i++){
+    ctbuf[i] = 0;
+    ivbuf[i] = 0;
+}
+/* we will do CBC manually */
+cipherInit(&encipher,MODE_ECB,NULL);
+for(int i=0;i<400;i++) {
+    makeKey(&keyin,DIR_ENCRYPT,256,akey);
+    file << "\n\nI=" << i << "\n";
+    file << "KEY=";
+    for(int k=0;k<64;k++)
+        file << akey[k];
+    file << "\nIV=";
+    for(int k=0;k<16;k++)
+        file << tohex[ivbuf[k]>>4] << tohex[ivbuf[k]&0x0f];
+    file << "\nCT=";
+    for(int k=0;k<16;k++)
+        file << tohex[ctbuf[k]>>4] << tohex[ctbuf[k]&0x0f];
+    for(int k=0;k<10000;k++){
+        blockDecrypt(&decipher, &keyin, ctbuf, 128, ptbuf);
+        for(int j=0;j<16;j++)
+            ptbuf[j] ^= ivbuf[j];
+        for(int j=0;j<16;j++){
+            ivbuf[j] = ctbuf[j];
+            ctbuf[j] = ptbuf[j];
         }
     }
-    fprintf(fp,"\n==========\n");
-    fclose(fp);
-
+    file << "\nPT=";
+    for(int k=0;k<16;k++){
+        file << tohex[ptbuf[k]>>4] << tohex[ptbuf[k]&0x0f];
+    }
+    /* the first 128 bits come from ctbuf, and
+     * the remaining 128 bits from ptbuf (CT9999, and CT9998)
+     */
+    for(int k=0;k<16;k++) {
+        akey[2*k] = tohex[hex[(int)akey[2*k]] ^ (ivbuf[k]>>4)];
+        akey[2*k+1] = tohex[hex[(int)akey[2*k+1]] ^ (ivbuf[k] & 0x0f)];
+        akey[2*k+32] = tohex[hex[(int)akey[2*k+32]]^(ptbuf[k]>>4)];
+        akey[2*k+33] = tohex[(int)hex[(int)akey[2*k+33]]^(ptbuf[k]&0x0f)];
+    }
+}
+file << "\n==========\n";
+file.close();
 #endif /* MCT */
 
     return (0);
