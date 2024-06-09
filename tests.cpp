@@ -4,11 +4,173 @@
 #include <fstream>
 #include <iostream>
 using namespace std;
-/*************************************************************************
- *
- *   test main() for the high and low level routines
- *
- ************************************************************************/
+
+
+void mct_cbc_decrypt(BYTE ctbuf[16], cipherInstance &decipher, cipherInstance &encipher, keyInstance &keyin) {
+//mct setup
+    extern BYTE hex[];
+    BYTE ivbuf[16];
+
+//file setup
+    FILE *fp;
+    BYTE ptbuf[16];
+    char akey[MAX_KEY_SIZE + 1];
+    char tohex[16] = {
+        '0', '1', '2', '3', '4', '5', '6', '7', '8',
+        '9', 'A', 'B', 'C', 'D', 'E', 'F'
+    };
+    int j, k;
+
+
+    ofstream file("cbc_d_m.txt");
+    file << "=========================\n\n";
+    file << "FILENAME:  \"cbc_d_m.txt\"\n\n";
+    file << "Cipher Block Chaining (CBC) Mode - DECRYPTION\n";
+    file << "Monte Carlo Test\n\n";
+    file << "Algorithm Name: Mars\n";
+    file << "Principle Submitter: IBM\n";
+
+    /* 128 bit keys */
+    file << "\n\n==========\n\nKEYSIZE=128\n";
+    /* the starting key, IV, and CT are all zeros */
+    for (int i = 0; i < 64; i++)
+        akey[i] = '0';
+    akey[64] = '\0';
+    for (int i = 0; i < 16; i++) {
+        ctbuf[i] = 0;
+        ivbuf[i] = 0;
+    }
+    /* we will do CBC manually */
+    cipherInit(&decipher,MODE_ECB,NULL);
+    for (int i = 0; i < 400; i++) {
+        makeKey(&keyin,DIR_DECRYPT, 128, akey);
+        file << "\n\nI=" << i << "\n";
+        file << "KEY=";
+        for (int k = 0; k < 32; k++)
+            file << akey[k];
+        file << "\nIV=";
+        for (int k = 0; k < 16; k++)
+            file << tohex[ivbuf[k] >> 4] << tohex[ivbuf[k] & 0x0f];
+        file << "\nCT=";
+        for (int k = 0; k < 16; k++)
+            file << tohex[ctbuf[k] >> 4] << tohex[ctbuf[k] & 0x0f];
+        for (int k = 0; k < 10000; k++) {
+            blockDecrypt(&decipher, &keyin, ctbuf, 128, ptbuf);
+            for (int j = 0; j < 16; j++)
+                ptbuf[j] ^= ivbuf[j];
+            for (int j = 0; j < 16; j++) {
+                ivbuf[j] = ctbuf[j];
+                ctbuf[j] = ptbuf[j];
+            }
+        }
+        file << "\nPT=";
+        for (int k = 0; k < 16; k++) {
+            file << tohex[ptbuf[k] >> 4] << tohex[ptbuf[k] & 0x0f];
+        }
+        for (int k = 0; k < 16; k++) {
+            akey[2 * k] = tohex[hex[(int) akey[2 * k]] ^ (ptbuf[k] >> 4)];
+            akey[2 * k + 1] = tohex[(int) hex[(int) akey[2 * k + 1]] ^ (ptbuf[k] & 0x0f)];
+        }
+    }
+    /* 192 bit keys */
+    file << "\n\n==========\n\nKEYSIZE=192\n";
+    /* the starting key, IV, and CT are all zeros */
+    for (int i = 0; i < 64; i++)
+        akey[i] = '0';
+    akey[64] = '\0';
+    for (int i = 0; i < 16; i++) {
+        ctbuf[i] = 0;
+        ivbuf[i] = 0;
+    }
+    /* we will do CBC manually */
+    cipherInit(&encipher,MODE_ECB,NULL);
+    for (int i = 0; i < 400; i++) {
+        makeKey(&keyin,DIR_ENCRYPT, 192, akey);
+        file << "\n\nI=" << i << "\n";
+        file << "KEY=";
+        for (int k = 0; k < 48; k++)
+            file << akey[k];
+        file << "\nIV=";
+        for (int k = 0; k < 16; k++)
+            file << tohex[ivbuf[k] >> 4] << tohex[ivbuf[k] & 0x0f];
+        file << "\nCT=";
+        for (int k = 0; k < 16; k++)
+            file << tohex[ctbuf[k] >> 4] << tohex[ctbuf[k] & 0x0f];
+        for (int k = 0; k < 10000; k++) {
+            blockDecrypt(&decipher, &keyin, ctbuf, 128, ptbuf);
+            for (int j = 0; j < 16; j++)
+                ptbuf[j] ^= ivbuf[j];
+            for (int j = 0; j < 16; j++) {
+                ivbuf[j] = ctbuf[j];
+                ctbuf[j] = ptbuf[j];
+            }
+        }
+        file << "\nPT=";
+        for (int k = 0; k < 16; k++) {
+            file << tohex[ptbuf[k] >> 4] << tohex[ptbuf[k] & 0x0f];
+        }
+        /* the first 64 bits come from the end of ivbuf, and
+         * the remaining 128 bits from ctbuf (CT9999, and CT9998)
+         */
+        for (int k = 0; k < 8; k++) {
+            akey[2 * k] = tohex[hex[(int) akey[2 * k]] ^ (ivbuf[k + 8] >> 4)];
+            akey[2 * k + 1] = tohex[hex[(int) akey[2 * k + 1]] ^ (ivbuf[k + 8] & 0x0f)];
+        }
+        for (int k = 0; k < 16; k++) {
+            akey[2 * k + 16] = tohex[hex[(int) akey[2 * k + 16]] ^ (ptbuf[k] >> 4)];
+            akey[2 * k + 17] = tohex[(int) hex[(int) akey[2 * k + 17]] ^ (ptbuf[k] & 0x0f)];
+        }
+    }
+    /* 256 bit keys */
+    file << "\n\n==========\n\nKEYSIZE=256\n";
+    /* the starting key, IV, and PT are all zeros */
+    for (int i = 0; i < 64; i++)
+        akey[i] = '0';
+    akey[64] = '\0';
+    for (int i = 0; i < 16; i++) {
+        ctbuf[i] = 0;
+        ivbuf[i] = 0;
+    }
+    /* we will do CBC manually */
+    cipherInit(&encipher,MODE_ECB,NULL);
+    for (int i = 0; i < 400; i++) {
+        makeKey(&keyin,DIR_ENCRYPT, 256, akey);
+        file << "\n\nI=" << i << "\n";
+        file << "KEY=";
+        for (int k = 0; k < 64; k++)
+            file << akey[k];
+        file << "\nIV=";
+        for (int k = 0; k < 16; k++)
+            file << tohex[ivbuf[k] >> 4] << tohex[ivbuf[k] & 0x0f];
+        file << "\nCT=";
+        for (int k = 0; k < 16; k++)
+            file << tohex[ctbuf[k] >> 4] << tohex[ctbuf[k] & 0x0f];
+        for (int k = 0; k < 10000; k++) {
+            blockDecrypt(&decipher, &keyin, ctbuf, 128, ptbuf);
+            for (int j = 0; j < 16; j++)
+                ptbuf[j] ^= ivbuf[j];
+            for (int j = 0; j < 16; j++) {
+                ivbuf[j] = ctbuf[j];
+                ctbuf[j] = ptbuf[j];
+            }
+        }
+        file << "\nPT=";
+        for (int k = 0; k < 16; k++) {
+            file << tohex[ptbuf[k] >> 4] << tohex[ptbuf[k] & 0x0f];
+        }
+        /* the first 128 bits come from ctbuf, and
+         * the remaining 128 bits from ptbuf (CT9999, and CT9998)
+         */
+        for (int k = 0; k < 16; k++) {
+            akey[2 * k] = tohex[hex[(int) akey[2 * k]] ^ (ivbuf[k] >> 4)];
+            akey[2 * k + 1] = tohex[hex[(int) akey[2 * k + 1]] ^ (ivbuf[k] & 0x0f)];
+            akey[2 * k + 32] = tohex[hex[(int) akey[2 * k + 32]] ^ (ptbuf[k] >> 4)];
+            akey[2 * k + 33] = tohex[(int) hex[(int) akey[2 * k + 33]] ^ (ptbuf[k] & 0x0f)];
+        }
+    }
+    file << "\n==========\n";
+    file.close();
+}
 
 
 
@@ -26,7 +188,7 @@ int main() {
     // variables for timing tests to measure the time it takes to encrypt and decrypt blocks
     int i;
 
-    cout<<"MARS Test Program\n";
+    cout << "MARS Test Program\n";
     /* do simple CBC encrypt/decrypt test for the high level stuff first */
     char keyMaterial[] = "000102030405060708090a0b0c0d0e0f";
     makeKey(&keyin, DIR_ENCRYPT, 128, keyMaterial);
@@ -109,6 +271,13 @@ int main() {
     ttime1 = static_cast<float>(clock2 - clock1) / CLOCKS_PER_SEC;
     cout << "Time for decrypting 400K 128 bit blocks: " << ttime1 << endl;
     cout << " " << (51.2 / ttime1) << " Mbit/sec" << endl;
+
+
+    cout << "Low level tests" << endl;
+
+    cout << "MCT CBC Decryption Test" << endl;
+    mct_cbc_decrypt(ctbuf, decipher, encipher, keyin);
+
 
     return (0);
 }
