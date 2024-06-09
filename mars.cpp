@@ -199,16 +199,13 @@ int ivt_l = 0;
 /* if multiplication subkey k has 10 0's or 10 1's, mask in a fixing value */
 static WORD fix_subkey(WORD k, WORD r) {
     /* the mask words come from S[265]..S[268], as chosen by index.c */
-    WORD *B = &S[265];
-    WORD m1, m2;
-    int i;
+    const WORD *B = &S[265];
 
-    i = k & 3; /* store the least two bits of k */
-    k |= 3; /* and then mask them away       */
+    int i = static_cast<int>(k & 3); // store the least two bits of k    k |= 3; /* and then mask them away       */
 
     /* we look for 9 consequtive 1's in m1 */
-    m1 = (~k) ^ (k << 1); /* for i > 1, m1_i = 1 iff k_i = k_{i-1} */
-    m2 = m1 & (m1 << 1); /* m2_i = AND (m1_i, m1_{i-1})   */
+    WORD m1 = (~k) ^ (k << 1); /* for i > 1, m1_i = 1 iff k_i = k_{i-1} */
+    WORD m2 = m1 & (m1 << 1); /* m2_i = AND (m1_i, m1_{i-1})   */
     m2 &= m2 << 2; /* m2_i = AND (m1_i...m1_{i-3})  */
     m2 &= m2 << 4; /* m2_i = AND (m1_i...m1_{i-7})  */
     m2 &= m1 << 8; /* m2_i = AND (m1_i...m1_{i-8})  */
@@ -311,9 +308,9 @@ int mars_setup(int n, WORD *kp, WORD *ep)
  * @return  1 if success, BAD_KEY_MAT if key length is invalid
  */
 // masr_setup function is used to generate the expanded key from the given key
-int mars_setup(int n, WORD *kp, WORD *ep) {
+int mars_setup(int n, const WORD *kp, WORD *ep) {
     WORD T[15] = {0};
-    int i, j, t;
+    int i;
 
     /* check key length */
     if ((n < 4) || (n > 14))
@@ -327,7 +324,7 @@ int mars_setup(int n, WORD *kp, WORD *ep) {
         T[i] = 0;
 
     /* Four iterations, each one computing 10 words of the array */
-    for (j = 0; j < 4; j++) {
+    for (int j = 0; j < 4; j++) {
         /* Linear transformation */
         for (i = 0; i < 15; i++) {
             WORD w = T[(i + 8) % 15] ^ T[(i + 13) % 15]; /* T[i-7] ^ T[i-2] */
@@ -335,7 +332,7 @@ int mars_setup(int n, WORD *kp, WORD *ep) {
         }
 
         /* Four stirring rounds */
-        for (t = 0; t < 4; t++) {
+        for (int t = 0; t < 4; t++) {
             /* stir with full type-1 s-box rounds */
             i = 0;
             for (; i < 15; i++) {
@@ -370,13 +367,10 @@ int mars_setup(int n, WORD *kp, WORD *ep) {
  * @param dst3  destination index 3
  */
 void forward_mix_round(WORD data[], int src, int dst1, int dst2, int dst3) {
-    int i0, i1, i2, i3;
-
-    i0 = data[src] & 255; /* lowest byte */
-    i1 = (data[src] >> 8) & 255; /* 2nd byte    */
-    i2 = (data[src] >> 16) & 255; /* 3rd byte    */
-    i3 = (data[src] >> 24) & 255; /* highest byte*/
-
+    const int i0 = static_cast<int>(data[src] & 255); // lowest byte
+    const int i1 = static_cast<int>((data[src] >> 8) & 255); // 2nd byte
+    const int i2 = static_cast<int>((data[src] >> 16) & 255); // 3rd byte
+    const int i3 = static_cast<int>((data[src] >> 24) & 255); // highest byte
     data[dst1] ^= S[i0];
     data[dst1] += S[i1 + 256];
     data[dst2] += S[i2];
@@ -397,13 +391,10 @@ void forward_mix_round(WORD data[], int src, int dst1, int dst2, int dst3) {
  * @param dst3 destination index 3
  */
 void backwards_mix_round(WORD data[], int src, int dst1, int dst2, int dst3) {
-    int i0, i1, i2, i3;
-
-    i0 = data[src] & 255; /* lowest byte */
-    i1 = (data[src] >> 8) & 255; /* 2nd byte    */
-    i2 = (data[src] >> 16) & 255; /* 3rd byte    */
-    i3 = (data[src] >> 24) & 255; /* highest byte*/
-
+    const int i0 = static_cast<int>(data[src] & 255); // lowest byte
+    const int i1 = static_cast<int>((data[src] >> 8) & 255); // 2nd byte
+    const int i2 = static_cast<int>((data[src] >> 16) & 255); // 3rd byte
+    const int i3 = static_cast<int>((data[src] >> 24) & 255); // highest byte
     data[dst1] ^= S[i0 + 256];
     data[dst2] -= S[i3];
     data[dst3] -= S[i2 + 256];
@@ -434,7 +425,7 @@ void backwards_mix_round(WORD data[], int src, int dst1, int dst2, int dst3) {
  * @param out  output data
  * @param key  expanded key
  */
-void mars_encrypt(WORD *in, WORD *out, WORD *key) {
+void mars_encrypt(const WORD *in, WORD *out, const WORD *key) {
     int i;
     IVT_DEBUG(in[0], in[1], in[2], in[3]);
 
@@ -514,7 +505,7 @@ void mars_encrypt(WORD *in, WORD *out, WORD *key) {
  * @param out output data
  * @param key   expanded key
  */
-void mars_decrypt(WORD *in, WORD *out, WORD *key) {
+void mars_decrypt(const WORD *in, WORD *out, const WORD *key) {
     int i;
     IVT_DEBUG(in[0], in[1], in[2], in[3]);
 
@@ -623,7 +614,7 @@ BYTE hex[256] = {
  *         if key is nullptr return BAD_KEY_INSTANCE
  *
  */
-int makeKey(keyInstance *key, BYTE direction, int keyLen, char *keyMaterial) {
+int makeKey(keyInstance *key, const BYTE direction, int keyLen, const char *keyMaterial) {
     WORD tmpkey[EKEY_WORDS];
     int i, j;
 
@@ -662,7 +653,7 @@ int makeKey(keyInstance *key, BYTE direction, int keyLen, char *keyMaterial) {
  * @param IV  initialization vector
  * @return      TRUE if success, BAD_CIPHER_MODE if cipher is nullptr
  */
-int cipherInit(cipherInstance *cipher, BYTE mode, char *IV) {
+int cipherInit(cipherInstance *cipher, const BYTE mode, const char *IV) {
     /* sanity check pointers */
     if (cipher == nullptr)
         return (BAD_CIPHER_MODE);

@@ -3,23 +3,6 @@
 
 #include <iostream>
 
-/*  AES Cipher header file for ANSI C Submissions
- *    Lawrence E. Bassham III
- *    Computer Security Division
- *    National Institute of Standards and Technology
- *
- *    April 15, 1998
- *
- *    Modified for IBM submission
- *    David Safford
- *    4/16/1998
- */
-/*************************************************************************
- *
- *    NIST High Level C API, with some IBM additions
- *
- ************************************************************************/
-
 #define TRUE            1
 #define FALSE           0
 
@@ -70,9 +53,9 @@ typedef struct {
 } cipherInstance;
 
 /*  NIST High level function protoypes  */
-int makeKey(keyInstance *key, BYTE direction, int keyLen, char *keyMaterial);
+int makeKey(keyInstance *key, BYTE direction, int keyLen, const char *keyMaterial);
 
-int cipherInit(cipherInstance *cipher, BYTE mode, char *IV);
+int cipherInit(cipherInstance *cipher, BYTE mode, const char *IV);
 
 int blockEncrypt(cipherInstance *cipher, keyInstance *key, BYTE *input,
                  int inputLen, BYTE *outBuffer);
@@ -80,11 +63,6 @@ int blockEncrypt(cipherInstance *cipher, keyInstance *key, BYTE *input,
 int blockDecrypt(cipherInstance *cipher, keyInstance *key, BYTE *input,
                  int inputLen, BYTE *outBuffer);
 
-/*************************************************************************
- *
- *    IBM Low Level (WORD Oriented) API
- *
- ************************************************************************/
 
 /* setup a mars expanded key
  *
@@ -92,12 +70,12 @@ int blockDecrypt(cipherInstance *cipher, keyInstance *key, BYTE *input,
  * kp (input) is a pointer to the array of k key words
  * ep (output) is a pointer to an array of EKEY_WORDS expanded subkey WORDs
  */
-int mars_setup(int k, WORD *kp, WORD *ep);
+int mars_setup(int k, const WORD *kp, WORD *ep);
 
 /* The basic mars encryption of one block (of NUM_DATA WORDS) */
-void mars_encrypt(WORD *in, WORD *out, WORD *ep);
+void mars_encrypt(const WORD *in, WORD *out, const WORD *ep);
 
 /* mars decryption is simply encryption in reverse */
-void mars_decrypt(WORD *in, WORD *out, WORD *ep);
+void mars_decrypt(const WORD *in, WORD *out, const WORD *ep);
 
 #endif // AES_H

@@ -1172,8 +1172,7 @@ int main() {
     blockDecrypt(&decipher, &keyin, ctbuf, 256, outbuf);
 
     // Print the decrypted message
-    printf("\nHigh level output test: \n %s\n", reinterpret_cast<char *>(outbuf));
-
+    cout << "\nHigh level output test: \n" << reinterpret_cast<char *>(outbuf) << "\n";
 
     /* try the CFB-1 mode */
     makeKey(&keyin,DIR_ENCRYPT, 128, keyMaterial);
@@ -1239,10 +1238,10 @@ int main() {
     cout << " " << (51.2 / ttime1) << " Mbit/sec" << endl;
 
 
-    cout << "Low level tests" << endl;
+    cout << "Other tests" << endl;
 
     cout << "IVT ECB Test" << endl;
-    // ivt_ecb(ctbuf, outbuf, decipher, encipher, keyin);
+    ivt_ecb(ctbuf, outbuf, decipher, encipher, keyin);
 
     cout << "Variable key KAT Test" << endl;
     key_kat(ctbuf, outbuf, decipher, encipher, keyin);
