@@ -37,8 +37,8 @@ void ivt_ecb(BYTE ctbuf[16], BYTE outbuf[16], cipherInstance &decipher, cipherIn
      Prepares a key (initially all zeros) to use for encryption and decryption.*/
 
     // the input plaintext and key are all zeros
-    for (int i = 0; i < 16; i++)
-        ptbuf[i] = 0;
+    for (unsigned char &i: ptbuf)
+        i = 0;
 
     /*
         *For each key size (128-bit, 192-bit, and 256-bit):
@@ -58,8 +58,8 @@ void ivt_ecb(BYTE ctbuf[16], BYTE outbuf[16], cipherInstance &decipher, cipherIn
     file << "KEY=" << akey << "\n";
     file << "PT=00000000000000000000000000000000\n";
     makeKey(&keyin,DIR_ENCRYPT, 128, akey);
-    cipherInit(&encipher,MODE_ECB,NULL);
-    cipherInit(&decipher,MODE_ECB,NULL);
+    cipherInit(&encipher,MODE_ECB, nullptr);
+    cipherInit(&decipher,MODE_ECB, nullptr);
     blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
     file << "CT=";
     for (int k = 0; k < 16; k++)
@@ -83,8 +83,8 @@ void ivt_ecb(BYTE ctbuf[16], BYTE outbuf[16], cipherInstance &decipher, cipherIn
     file << "KEY=" << akey << "\n";
     file << "PT=00000000000000000000000000000000\n";
     makeKey(&keyin,DIR_ENCRYPT, 192, akey);
-    cipherInit(&encipher,MODE_ECB,NULL);
-    cipherInit(&decipher,MODE_ECB,NULL);
+    cipherInit(&encipher,MODE_ECB, nullptr);
+    cipherInit(&decipher,MODE_ECB, nullptr);
 
     blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
     file << "CT=";
@@ -109,8 +109,8 @@ void ivt_ecb(BYTE ctbuf[16], BYTE outbuf[16], cipherInstance &decipher, cipherIn
     file << "KEY=" << akey << "\n";
     file << "PT=00000000000000000000000000000000\n";
     makeKey(&keyin,DIR_ENCRYPT, 256, akey);
-    cipherInit(&encipher,MODE_ECB,NULL);
-    cipherInit(&decipher,MODE_ECB,NULL);
+    cipherInit(&encipher,MODE_ECB, nullptr);
+    cipherInit(&decipher,MODE_ECB, nullptr);
     blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
     file << "CT=";
     for (int k = 0; k < 16; k++)
@@ -139,19 +139,8 @@ void ivt_ecb(BYTE ctbuf[16], BYTE outbuf[16], cipherInstance &decipher, cipherIn
  *It varies each bit of the key and logs the results to a file.
  */
 void key_kat(BYTE ctbuf[16], BYTE outbuf[16], cipherInstance &decipher, cipherInstance &encipher, keyInstance &keyin) {
-    WORD S[16] = {
-        0xf20b4862, 0xcd79bde4, 0x498f7a5b, 0xcfc31f4c,
-        0x354d61f3, 0x2e31fa47, 0x8c18da7f, 0xe14e831d,
-        0x5de9d8d6, 0x68843750, 0xa2e71b63, 0xeff8e372,
-        0x8792349d, 0x8a58369a, 0x2e9382ba, 0xa72b988f
-    };
-
     BYTE ptbuf[16];
     char akey[MAX_KEY_SIZE + 1];
-    char tohex[16] = {
-        '0', '1', '2', '3', '4', '5', '6', '7', '8',
-        '9', 'A', 'B', 'C', 'D', 'E', 'F'
-    };
 
     // 128 bit keys
     cout << "Running KAT tests" << endl;
@@ -163,8 +152,8 @@ void key_kat(BYTE ctbuf[16], BYTE outbuf[16], cipherInstance &decipher, cipherIn
     file << "Algorithm Name: Mars\n";
     file << "Principle Submitter: IBM\n";
     // the input plaintext is all zeros
-    for (int i = 0; i < 16; i++)
-        ptbuf[i] = 0;
+    for (unsigned char &i: ptbuf)
+        i = 0;
     /*
         *For each key size (128-bit, 192-bit, and 256-bit):
         Varies each bit of the key (by setting one bit at a time).
@@ -181,10 +170,10 @@ void key_kat(BYTE ctbuf[16], BYTE outbuf[16], cipherInstance &decipher, cipherIn
         for (int j = 3; j >= 0; j--) {
             for (int k = 0; k < 32; k++)
                 akey[k] = '0';
-            akey[i] = '0' + (1 << j);
+            akey[i] = static_cast<char>('0' + (1 << j));
             makeKey(&keyin,DIR_ENCRYPT, 128, akey);
-            cipherInit(&encipher,MODE_ECB,NULL);
-            cipherInit(&decipher,MODE_ECB,NULL);
+            cipherInit(&encipher,MODE_ECB, nullptr);
+            cipherInit(&decipher,MODE_ECB, nullptr);
             blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
             blockDecrypt(&decipher, &keyin, ctbuf, 128, outbuf);
             file << "\n\nI=" << i * 4 + 4 - j << "\n";
@@ -208,10 +197,10 @@ void key_kat(BYTE ctbuf[16], BYTE outbuf[16], cipherInstance &decipher, cipherIn
         for (int j = 3; j >= 0; j--) {
             for (int k = 0; k < 48; k++)
                 akey[k] = '0';
-            akey[i] = '0' + (1 << j);
+            akey[i] = static_cast<char>('0' + (1 << j));
             makeKey(&keyin,DIR_ENCRYPT, 192, akey);
-            cipherInit(&encipher,MODE_ECB,NULL);
-            cipherInit(&decipher,MODE_ECB,NULL);
+            cipherInit(&encipher,MODE_ECB, nullptr);
+            cipherInit(&decipher,MODE_ECB, nullptr);
             blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
             blockDecrypt(&decipher, &keyin, ctbuf, 128, outbuf);
             file << "\n\nI=" << i * 4 + 4 - j << "\n";
@@ -235,10 +224,10 @@ void key_kat(BYTE ctbuf[16], BYTE outbuf[16], cipherInstance &decipher, cipherIn
         for (int j = 3; j >= 0; j--) {
             for (int k = 0; k < 64; k++)
                 akey[k] = '0';
-            akey[i] = '0' + (1 << j);
-            makeKey(&keyin,DIR_ENCRYPT, 256, akey);
-            cipherInit(&encipher,MODE_ECB,NULL);
-            cipherInit(&decipher,MODE_ECB,NULL);
+            akey[i] = static_cast<char>('0' + (1 << j));
+            akey[i] = static_cast<char>('0' + (1 << j));
+            cipherInit(&encipher,MODE_ECB, nullptr);
+            cipherInit(&decipher,MODE_ECB, nullptr);
             blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
             blockDecrypt(&decipher, &keyin, ctbuf, 128, outbuf);
             file << "\n\nI=" << i * 4 + 4 - j << "\n";
@@ -262,11 +251,11 @@ void key_kat(BYTE ctbuf[16], BYTE outbuf[16], cipherInstance &decipher, cipherIn
  * plaintexts and logs the results to a file named "ecb_vt.txt".
  * Additionally, it performs a series of tests to ensure that all entries in the
  * fixed S-box are used at least once, and logs these results to another file named "ecb_tbl.txt".
- * @param ctbuf 
- * @param outbuf 
- * @param decipher 
- * @param encipher 
- * @param keyin 
+ * @param ctbuf
+ * @param outbuf
+ * @param decipher
+ * @param encipher
+ * @param keyin
  */
 void text_kat_var(BYTE ctbuf[16], BYTE outbuf[16], cipherInstance &decipher, cipherInstance &encipher,
                   keyInstance &keyin) {
@@ -279,10 +268,6 @@ void text_kat_var(BYTE ctbuf[16], BYTE outbuf[16], cipherInstance &decipher, cip
 
     BYTE ptbuf[16];
     char akey[MAX_KEY_SIZE + 1];
-    char tohex[16] = {
-        '0', '1', '2', '3', '4', '5', '6', '7', '8',
-        '9', 'A', 'B', 'C', 'D', 'E', 'F'
-    };
 
     ofstream file("ecb_vt.txt");
     file << "=========================\n\n";
@@ -295,23 +280,22 @@ void text_kat_var(BYTE ctbuf[16], BYTE outbuf[16], cipherInstance &decipher, cip
     for (int i = 0; i < 64; i++)
         akey[i] = '0';
     akey[64] = '\0';
-/*
-  *Run Tests for Different Key Sizes (128-bit, 192-bit, and 256-bit):
-For each key size:
-    Uses a fixed key.
-    Varies each bit of the plaintext by setting one bit at a time.
-    Encrypts the modified plaintext.
-    Decrypts the resulting ciphertext.
-    Logs the key, plaintext, ciphertext, and any decryption errors to the file.
-  *Run Tests for S-Box Entries:
- For each key size:
-    Uses a fixed key.
-    Starts with an initial plaintext.
-    Encrypts the plaintext and logs the results.
-    Sets the next plaintext to the last ciphertext output and repeats.
- *
- */
-
+    /*
+      *Run Tests for Different Key Sizes (128-bit, 192-bit, and 256-bit):
+    For each key size:
+        Uses a fixed key.
+        Varies each bit of the plaintext by setting one bit at a time.
+        Encrypts the modified plaintext.
+        Decrypts the resulting ciphertext.
+        Logs the key, plaintext, ciphertext, and any decryption errors to the file.
+      *Run Tests for S-Box Entries:
+     For each key size:
+        Uses a fixed key.
+        Starts with an initial plaintext.
+        Encrypts the plaintext and logs the results.
+        Sets the next plaintext to the last ciphertext output and repeats.
+     *
+     */
 
 
     /* 128 bit keys */
@@ -319,18 +303,18 @@ For each key size:
     file << "KEY=00000000000000000000000000000000\n";
     for (int i = 0; i < 16; i++) {
         for (int j = 7; j >= 0; j--) {
-            for (int k = 0; k < 16; k++)
-                ptbuf[k] = 0;
+            for (unsigned char &k: ptbuf)
+                k = 0;
             ptbuf[i] = (1 << j);
             makeKey(&keyin,DIR_ENCRYPT, 128, akey);
-            cipherInit(&encipher,MODE_ECB,NULL);
-            cipherInit(&decipher,MODE_ECB,NULL);
+            cipherInit(&encipher,MODE_ECB, nullptr);
+            cipherInit(&decipher,MODE_ECB, nullptr);
             blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
             blockDecrypt(&decipher, &keyin, ctbuf, 128, outbuf);
             file << "\n\nI=" << i * 8 + 8 - j << "\n";
             file << "PT=";
-            for (int k = 0; k < 16; k++)
-                file << hex << setw(2) << setfill('0') << static_cast<int>(ptbuf[k]);
+            for (unsigned char k: ptbuf)
+                file << hex << setw(2) << setfill('0') << static_cast<int>(k);
             file << "\nCT=";
             for (int k = 0; k < 16; k++) {
                 if (outbuf[k] != ptbuf[k])
@@ -345,18 +329,18 @@ For each key size:
     file << "KEY=000000000000000000000000000000000000000000000000\n";
     for (int i = 0; i < 16; i++) {
         for (int j = 7; j >= 0; j--) {
-            for (int k = 0; k < 16; k++)
-                ptbuf[k] = 0;
+            for (unsigned char &k: ptbuf)
+                k = 0;
             ptbuf[i] = (1 << j);
             makeKey(&keyin,DIR_ENCRYPT, 192, akey);
-            cipherInit(&encipher,MODE_ECB,NULL);
-            cipherInit(&decipher,MODE_ECB,NULL);
+            cipherInit(&encipher,MODE_ECB, nullptr);
+            cipherInit(&decipher,MODE_ECB, nullptr);
             blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
             blockDecrypt(&decipher, &keyin, ctbuf, 128, outbuf);
             file << "\n\nI=" << i * 8 + 8 - j << "\n";
             file << "PT=";
-            for (int k = 0; k < 16; k++)
-                file << hex << setw(2) << setfill('0') << static_cast<int>(ptbuf[k]);
+            for (unsigned char k: ptbuf)
+                file << hex << setw(2) << setfill('0') << static_cast<int>(k);
             file << "\nCT=";
             for (int k = 0; k < 16; k++) {
                 if (outbuf[k] != ptbuf[k])
@@ -372,18 +356,18 @@ For each key size:
     file << "00000000000000000000000000000000\n";
     for (int i = 0; i < 16; i++) {
         for (int j = 7; j >= 0; j--) {
-            for (int k = 0; k < 16; k++)
-                ptbuf[k] = 0;
+            for (unsigned char &k: ptbuf)
+                k = 0;
             ptbuf[i] = (1 << j);
             makeKey(&keyin,DIR_ENCRYPT, 256, akey);
-            cipherInit(&encipher,MODE_ECB,NULL);
-            cipherInit(&decipher,MODE_ECB,NULL);
+            cipherInit(&encipher,MODE_ECB, nullptr);
+            cipherInit(&decipher,MODE_ECB, nullptr);
             blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
             blockDecrypt(&decipher, &keyin, ctbuf, 128, outbuf);
             file << "\n\nI=" << i * 8 + 8 - j << "\n";
             file << "PT=";
-            for (int k = 0; k < 16; k++)
-                file << hex << setw(2) << setfill('0') << static_cast<int>(ptbuf[k]);
+            for (unsigned char k: ptbuf)
+                file << hex << setw(2) << setfill('0') << static_cast<int>(k);
             file << "\nCT=";
             for (int k = 0; k < 16; k++) {
                 if (outbuf[k] != ptbuf[k])
@@ -419,17 +403,17 @@ For each key size:
     /* 128 bit keys */
     file2 << "\n\n==========\n\nKEYSIZE=128\n";
     makeKey(&keyin,DIR_ENCRYPT, 128, akey);
-    cipherInit(&encipher,MODE_ECB,NULL);
+    cipherInit(&encipher,MODE_ECB, nullptr);
     /* set some interesting starting text */
-    for (int i = 0; i < 16; i++)
-        ptbuf[i] = 0;
+    for (unsigned char &i: ptbuf)
+        i = 0;
     for (int i = 1; i < 41; i++) {
         blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
         file2 << "\n\nI=" << i << "\n";
         file2 << "KEY=00000000000000000000000000000000\n";
         file2 << "PT=";
-        for (int k = 0; k < 16; k++)
-            file2 << hex << setw(2) << setfill('0') << static_cast<int>(ptbuf[k]);
+        for (unsigned char k: ptbuf)
+            file2 << hex << setw(2) << setfill('0') << static_cast<int>(k);
         file2 << "\nCT=";
         for (int k = 0; k < 16; k++)
             file2 << hex << setw(2) << setfill('0') << static_cast<int>(ctbuf[k]);
@@ -439,18 +423,18 @@ For each key size:
     /* 192 bit keys */
     file2 << "\n\n==========\n\nKEYSIZE=192\n";
     makeKey(&keyin,DIR_ENCRYPT, 192, akey);
-    cipherInit(&encipher,MODE_ECB,NULL);
+    cipherInit(&encipher,MODE_ECB, nullptr);
     /* set some interesting starting text */
-    for (int i = 0; i < 16; i++)
-        ptbuf[i] = 0xaa;
+    for (unsigned char &i: ptbuf)
+        i = 0xaa;
     for (int i = 1; i < 41; i++) {
         blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
         file2 << "\n\nI=" << i << "\n";
         file2 << "KEY=00000000000000000000000000000000";
         file2 << "0000000000000000\n";
         file2 << "PT=";
-        for (int k = 0; k < 16; k++)
-            file2 << hex << setw(2) << setfill('0') << static_cast<int>(ptbuf[k]);
+        for (unsigned char k: ptbuf)
+            file2 << hex << setw(2) << setfill('0') << static_cast<int>(k);
         file2 << "\nCT=";
         for (int k = 0; k < 16; k++)
             file2 << hex << setw(2) << setfill('0') << static_cast<int>(ctbuf[k]);
@@ -460,7 +444,7 @@ For each key size:
     /* 256 bit keys */
     file2 << "\n\n==========\n\nKEYSIZE=256\n";
     makeKey(&keyin,DIR_ENCRYPT, 256, akey);
-    cipherInit(&encipher,MODE_ECB,NULL);
+    cipherInit(&encipher,MODE_ECB, nullptr);
     /* set some interesting starting text */
     for (int i = 0; i < 16; i++)
         ptbuf[i] = S[i] & 0xff;
@@ -470,8 +454,8 @@ For each key size:
         file2 << "KEY=00000000000000000000000000000000";
         file2 << "00000000000000000000000000000000\n";
         file2 << "PT=";
-        for (int k = 0; k < 16; k++)
-            file2 << hex << setw(2) << setfill('0') << static_cast<int>(ptbuf[k]);
+        for (unsigned char k: ptbuf)
+            file2 << hex << setw(2) << setfill('0') << static_cast<int>(k);
         file2 << "\nCT=";
         for (int k = 0; k < 16; k++)
             file2 << hex << setw(2) << setfill('0') << static_cast<int>(ctbuf[k]);
@@ -488,15 +472,12 @@ For each key size:
  * encryption algorithm by performing a large number of iterations with the same key and
  * plaintext and then varying the key slightly based on the ciphertext results
  * @param ctbuf
- * @param decipher
  * @param encipher
  * @param keyin
  */
 void mct_ecb_encrypt(BYTE ctbuf[16], cipherInstance &encipher, keyInstance &keyin) {
     //mct setup
     extern BYTE hex[];
-    BYTE ivbuf[16];
-
     //file setup
     BYTE ptbuf[16];
     char akey[MAX_KEY_SIZE + 1];
@@ -513,39 +494,39 @@ void mct_ecb_encrypt(BYTE ctbuf[16], cipherInstance &encipher, keyInstance &keyi
     file << "Algorithm Name: Mars\n";
     file << "Principle Submitter: IBM\n";
 
-/*
- *
- *
-    *Monte Carlo Test Loop:
+    /*
+     *
+     *
+        *Monte Carlo Test Loop:
 
-    Outer Loop (400 iterations):
-    Generate a key using makeKey.
+        Outer Loop (400 iterations):
+        Generate a key using makeKey.
 
-    Write the iteration number, key, and plaintext to the file.
+        Write the iteration number, key, and plaintext to the file.
 
-    Inner Loop (5000 iterations):
+        Inner Loop (5000 iterations):
 
-    Encrypt the plaintext to get the ciphertext (ctbuf).
-    Encrypt the ciphertext to get the next plaintext (ptbuf).
-    Write the final ciphertext to the file.
+        Encrypt the plaintext to get the ciphertext (ctbuf).
+        Encrypt the ciphertext to get the next plaintext (ptbuf).
+        Write the final ciphertext to the file.
 
-    Update the key:
+        Update the key:
 
-    For 128-bit keys: XOR the key with the plaintext.
-    For 192-bit keys: The first 64 bits come from the end of ctbuf, and the remaining 128 bits from ptbuf.
-    For 256-bit keys: The first 128 bits come from ctbuf, and the remaining 128 bits from ptbuf.
- *
- *
- */
+        For 128-bit keys: XOR the key with the plaintext.
+        For 192-bit keys: The first 64 bits come from the end of ctbuf, and the remaining 128 bits from ptbuf.
+        For 256-bit keys: The first 128 bits come from ctbuf, and the remaining 128 bits from ptbuf.
+     *
+     *
+     */
     /* 128 bit keys */
     file << "\n\n=========================\n\nKEYSIZE=128\n";
     /* the starting key and PT are all zeros */
     for (int i = 0; i < 64; i++)
         akey[i] = '0';
     akey[64] = '\0';
-    for (int i = 0; i < 16; i++)
-        ptbuf[i] = 0;
-    cipherInit(&encipher,MODE_ECB,NULL);
+    for (unsigned char &i: ptbuf)
+        i = 0;
+    cipherInit(&encipher,MODE_ECB, nullptr);
     for (int i = 0; i < 400; i++) {
         makeKey(&keyin,DIR_ENCRYPT, 128, akey);
         file << "\n\nI=" << i << "\n";
@@ -553,19 +534,20 @@ void mct_ecb_encrypt(BYTE ctbuf[16], cipherInstance &encipher, keyInstance &keyi
         for (int k = 0; k < 32; k++)
             file << akey[k];
         file << "\nPT=";
-        for (int k = 0; k < 16; k++)
-            file << tohex[ptbuf[k] >> 4] << tohex[ptbuf[k] & 0x0f];
+        for (unsigned char k: ptbuf)
+            file << tohex[k >> 4] << tohex[k & 0x0f];
         for (int k = 0; k < 5000; k++) {
             blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
             blockEncrypt(&encipher, &keyin, ctbuf, 128, ptbuf);
         }
         file << "\nCT=";
-        for (int k = 0; k < 16; k++) {
-            file << tohex[ptbuf[k] >> 4] << tohex[ptbuf[k] & 0x0f];
+        for (unsigned char k: ptbuf) {
+            file << tohex[k >> 4] << tohex[k & 0x0f];
         }
         for (int k = 0; k < 16; k++) {
-            akey[2 * k] = tohex[hex[(int) akey[2 * k]] ^ (ptbuf[k] >> 4)];
-            akey[2 * k + 1] = tohex[(int) hex[(int) akey[2 * k + 1]] ^ (ptbuf[k] & 0x0f)];
+            akey[2 * k] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k]))] ^ (ptbuf[k] >> 4)];
+            akey[2 * k + 1] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k + 1]))] ^ (
+                                        ptbuf[k] & 0x0f)];
         }
     }
     /* 192 bit keys */
@@ -574,9 +556,9 @@ void mct_ecb_encrypt(BYTE ctbuf[16], cipherInstance &encipher, keyInstance &keyi
     for (int i = 0; i < 64; i++)
         akey[i] = '0';
     akey[64] = '\0';
-    for (int i = 0; i < 16; i++)
-        ptbuf[i] = 0;
-    cipherInit(&encipher,MODE_ECB,NULL);
+    for (unsigned char &i: ptbuf)
+        i = 0;
+    cipherInit(&encipher,MODE_ECB, nullptr);
     for (int i = 0; i < 400; i++) {
         makeKey(&keyin,DIR_ENCRYPT, 192, akey);
         file << "\n\nI=" << i << "\n";
@@ -584,27 +566,30 @@ void mct_ecb_encrypt(BYTE ctbuf[16], cipherInstance &encipher, keyInstance &keyi
         for (int k = 0; k < 48; k++)
             file << akey[k];
         file << "\nPT=";
-        for (int k = 0; k < 16; k++)
-            file << tohex[ptbuf[k] >> 4] << tohex[ptbuf[k] & 0x0f];
+        for (unsigned char k: ptbuf)
+            file << tohex[k >> 4] << tohex[k & 0x0f];
         for (int k = 0; k < 5000; k++) {
             blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
             blockEncrypt(&encipher, &keyin, ctbuf, 128, ptbuf);
         }
         /* ptbuf contains the last CT, and ctbuf has the prior... */
         file << "\nCT=";
-        for (int k = 0; k < 16; k++) {
-            file << tohex[ptbuf[k] >> 4] << tohex[ptbuf[k] & 0x0f];
+        for (unsigned char k: ptbuf) {
+            file << tohex[k >> 4] << tohex[k & 0x0f];
         }
         /* the first 64 bits come from the end of ctbuf, and
          * the remaining 128 bits from ptbuf (CT9999, and CT9998)
          */
         for (int k = 0; k < 8; k++) {
-            akey[2 * k] = tohex[hex[(int) akey[2 * k]] ^ (ctbuf[k + 8] >> 4)];
-            akey[2 * k + 1] = tohex[hex[(int) akey[2 * k + 1]] ^ (ctbuf[k + 8] & 0x0f)];
+            akey[2 * k] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k]))] ^ (ctbuf[k + 8] >> 4)];
+            akey[2 * k + 1] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k + 1]))] ^ (
+                                        ctbuf[k + 8] & 0x0f)];
         }
         for (int k = 0; k < 16; k++) {
-            akey[2 * k + 16] = tohex[hex[(int) akey[2 * k + 16]] ^ (ptbuf[k] >> 4)];
-            akey[2 * k + 17] = tohex[(int) hex[(int) akey[2 * k + 17]] ^ (ptbuf[k] & 0x0f)];
+            akey[2 * k + 16] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k + 16]))] ^ (
+                                         ptbuf[k] >> 4)];
+            akey[2 * k + 17] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k + 17]))] ^ (
+                                         ptbuf[k] & 0x0f)];
         }
     }
     /* 256 bit keys */
@@ -613,9 +598,9 @@ void mct_ecb_encrypt(BYTE ctbuf[16], cipherInstance &encipher, keyInstance &keyi
     for (int i = 0; i < 64; i++)
         akey[i] = '0';
     akey[64] = '\0';
-    for (int i = 0; i < 16; i++)
-        ptbuf[i] = 0;
-    cipherInit(&encipher,MODE_ECB,NULL);
+    for (unsigned char &i: ptbuf)
+        i = 0;
+    cipherInit(&encipher,MODE_ECB, nullptr);
     for (int i = 0; i < 400; i++) {
         makeKey(&keyin,DIR_ENCRYPT, 256, akey);
         file << "\n\nI=" << i << "\n";
@@ -623,25 +608,28 @@ void mct_ecb_encrypt(BYTE ctbuf[16], cipherInstance &encipher, keyInstance &keyi
         for (int k = 0; k < 64; k++)
             file << akey[k];
         file << "\nPT=";
-        for (int k = 0; k < 16; k++)
-            file << tohex[ptbuf[k] >> 4] << tohex[ptbuf[k] & 0x0f];
+        for (unsigned char k: ptbuf)
+            file << tohex[k >> 4] << tohex[k & 0x0f];
         for (int k = 0; k < 5000; k++) {
             blockEncrypt(&encipher, &keyin, ptbuf, 128, ctbuf);
             blockEncrypt(&encipher, &keyin, ctbuf, 128, ptbuf);
         }
         /* ptbuf contains the last CT, and ctbuf has the prior... */
         file << "\nCT=";
-        for (int k = 0; k < 16; k++) {
-            file << tohex[ptbuf[k] >> 4] << tohex[ptbuf[k] & 0x0f];
+        for (unsigned char k: ptbuf) {
+            file << tohex[k >> 4] << tohex[k & 0x0f];
         }
         /* the first 128 bits come from ctbuf, and
          * the remaining 128 bits from ptbuf (CT9999, and CT9998)
          */
         for (int k = 0; k < 16; k++) {
-            akey[2 * k] = tohex[hex[(int) akey[2 * k]] ^ (ctbuf[k] >> 4)];
-            akey[2 * k + 1] = tohex[hex[(int) akey[2 * k + 1]] ^ (ctbuf[k] & 0x0f)];
-            akey[2 * k + 32] = tohex[hex[(int) akey[2 * k + 32]] ^ (ptbuf[k] >> 4)];
-            akey[2 * k + 33] = tohex[(int) hex[(int) akey[2 * k + 33]] ^ (ptbuf[k] & 0x0f)];
+            akey[2 * k] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k]))] ^ (ctbuf[k] >> 4)];
+            akey[2 * k + 1] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k + 1]))] ^ (
+                                        ctbuf[k] & 0x0f)];
+            akey[2 * k + 32] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k + 32]))] ^ (
+                                         ptbuf[k] >> 4)];
+            akey[2 * k + 33] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k + 33]))] ^ (
+                                         ptbuf[k] & 0x0f)];
         }
     }
     file << "\n==========\n";
@@ -661,7 +649,6 @@ void mct_ecb_encrypt(BYTE ctbuf[16], cipherInstance &encipher, keyInstance &keyi
 void mct_ecb_decrypt(BYTE ctbuf[16], cipherInstance &decipher, cipherInstance &encipher, keyInstance &keyin) {
     //mct setup
     extern BYTE hex[];
-    BYTE ivbuf[16];
 
     //file setup
     BYTE ptbuf[16];
@@ -685,9 +672,9 @@ void mct_ecb_decrypt(BYTE ctbuf[16], cipherInstance &decipher, cipherInstance &e
     for (int i = 0; i < 64; i++)
         akey[i] = '0';
     akey[64] = '\0';
-    for (int i = 0; i < 16; i++)
-        ptbuf[i] = 0;
-    cipherInit(&decipher,MODE_ECB,NULL);
+    for (unsigned char &i: ptbuf)
+        i = 0;
+    cipherInit(&decipher,MODE_ECB, nullptr);
     for (int i = 0; i < 400; i++) {
         makeKey(&keyin,DIR_DECRYPT, 128, akey);
         file << "\n\nI=" << i << "\n";
@@ -695,19 +682,20 @@ void mct_ecb_decrypt(BYTE ctbuf[16], cipherInstance &decipher, cipherInstance &e
         for (int k = 0; k < 32; k++)
             file << akey[k];
         file << "\nCT=";
-        for (int k = 0; k < 16; k++)
-            file << tohex[ptbuf[k] >> 4] << tohex[ptbuf[k] & 0x0f];
+        for (unsigned char k: ptbuf)
+            file << tohex[k >> 4] << tohex[k & 0x0f];
         for (int k = 0; k < 5000; k++) {
             blockDecrypt(&decipher, &keyin, ptbuf, 128, ctbuf);
             blockDecrypt(&decipher, &keyin, ctbuf, 128, ptbuf);
         }
         file << "\nPT=";
-        for (int k = 0; k < 16; k++) {
-            file << tohex[ptbuf[k] >> 4] << tohex[ptbuf[k] & 0x0f];
+        for (unsigned char k: ptbuf) {
+            file << tohex[k >> 4] << tohex[k & 0x0f];
         }
         for (int k = 0; k < 16; k++) {
-            akey[2 * k] = tohex[hex[(int) akey[2 * k]] ^ (ptbuf[k] >> 4)];
-            akey[2 * k + 1] = tohex[hex[(int) akey[2 * k + 1]] ^ (ptbuf[k] & 0x0f)];
+            akey[2 * k] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k]))] ^ (ptbuf[k] >> 4)];
+            akey[2 * k + 1] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k + 1]))] ^ (
+                                        ptbuf[k] & 0x0f)];
         }
     }
     /* 192 bit keys */
@@ -716,9 +704,9 @@ void mct_ecb_decrypt(BYTE ctbuf[16], cipherInstance &decipher, cipherInstance &e
     for (int i = 0; i < 64; i++)
         akey[i] = '0';
     akey[64] = '\0';
-    for (int i = 0; i < 16; i++)
-        ptbuf[i] = 0;
-    cipherInit(&decipher,MODE_ECB,NULL);
+    for (unsigned char &i: ptbuf)
+        i = 0;
+    cipherInit(&decipher,MODE_ECB, nullptr);
     for (int i = 0; i < 400; i++) {
         makeKey(&keyin,DIR_DECRYPT, 192, akey);
         file << "\n\nI=" << i << "\n";
@@ -726,27 +714,30 @@ void mct_ecb_decrypt(BYTE ctbuf[16], cipherInstance &decipher, cipherInstance &e
         for (int k = 0; k < 48; k++)
             file << akey[k];
         file << "\nCT=";
-        for (int k = 0; k < 16; k++)
-            file << tohex[ptbuf[k] >> 4] << tohex[ptbuf[k] & 0x0f];
+        for (unsigned char k: ptbuf)
+            file << tohex[k >> 4] << tohex[k & 0x0f];
         for (int k = 0; k < 5000; k++) {
             blockDecrypt(&decipher, &keyin, ptbuf, 128, ctbuf);
             blockDecrypt(&decipher, &keyin, ctbuf, 128, ptbuf);
         }
         /* ptbuf contains the last CT, and ctbuf has the prior... */
         file << "\nPT=";
-        for (int k = 0; k < 16; k++) {
-            file << tohex[ptbuf[k] >> 4] << tohex[ptbuf[k] & 0x0f];
+        for (unsigned char k: ptbuf) {
+            file << tohex[k >> 4] << tohex[k & 0x0f];
         }
         /* the first 64 bits come from the end of ctbuf, and
          * the remaining 128 bits from ptbuf (CT9999, and CT9998)
          */
         for (int k = 0; k < 8; k++) {
-            akey[2 * k] = tohex[hex[(int) akey[2 * k]] ^ (ctbuf[k + 8] >> 4)];
-            akey[2 * k + 1] = tohex[hex[(int) akey[2 * k + 1]] ^ (ctbuf[k + 8] & 0x0f)];
+            akey[2 * k] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k]))] ^ (ctbuf[k + 8] >> 4)];
+            akey[2 * k + 1] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k + 1]))] ^ (
+                                        ctbuf[k + 8] & 0x0f)];
         }
         for (int k = 0; k < 16; k++) {
-            akey[2 * k + 16] = tohex[hex[(int) akey[2 * k + 16]] ^ (ptbuf[k] >> 4)];
-            akey[2 * k + 17] = tohex[hex[(int) akey[2 * k + 17]] ^ (ptbuf[k] & 0x0f)];
+            akey[2 * k + 16] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k + 16]))] ^ (
+                                         ptbuf[k] >> 4)];
+            akey[2 * k + 17] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k + 17]))] ^ (
+                                         ptbuf[k] & 0x0f)];
         }
     }
     /* 256 bit keys */
@@ -755,9 +746,9 @@ void mct_ecb_decrypt(BYTE ctbuf[16], cipherInstance &decipher, cipherInstance &e
     for (int i = 0; i < 64; i++)
         akey[i] = '0';
     akey[64] = '\0';
-    for (int i = 0; i < 16; i++)
-        ptbuf[i] = 0;
-    cipherInit(&decipher,MODE_ECB,NULL);
+    for (unsigned char &i: ptbuf)
+        i = 0;
+    cipherInit(&decipher,MODE_ECB, nullptr);
     for (int i = 0; i < 400; i++) {
         makeKey(&keyin,DIR_DECRYPT, 256, akey);
         file << "\n\nI=" << i << "\n";
@@ -765,25 +756,28 @@ void mct_ecb_decrypt(BYTE ctbuf[16], cipherInstance &decipher, cipherInstance &e
         for (int k = 0; k < 64; k++)
             file << akey[k];
         file << "\nCT=";
-        for (int k = 0; k < 16; k++)
-            file << tohex[ptbuf[k] >> 4] << tohex[ptbuf[k] & 0x0f];
+        for (unsigned char k: ptbuf)
+            file << tohex[k >> 4] << tohex[k & 0x0f];
         for (int k = 0; k < 5000; k++) {
             blockDecrypt(&decipher, &keyin, ptbuf, 128, ctbuf);
             blockDecrypt(&decipher, &keyin, ctbuf, 128, ptbuf);
         }
         /* ptbuf contains the last CT, and ctbuf has the prior... */
         file << "\nPT=";
-        for (int k = 0; k < 16; k++) {
-            file << tohex[ptbuf[k] >> 4] << tohex[ptbuf[k] & 0x0f];
+        for (unsigned char k: ptbuf) {
+            file << tohex[k >> 4] << tohex[k & 0x0f];
         }
         /* the first 128 bits come from ctbuf, and
          * the remaining 128 bits from ptbuf (CT9999, and CT9998)
          */
         for (int k = 0; k < 16; k++) {
-            akey[2 * k] = tohex[hex[(int) akey[2 * k]] ^ (ctbuf[k] >> 4)];
-            akey[2 * k + 1] = tohex[hex[(int) akey[2 * k + 1]] ^ (ctbuf[k] & 0x0f)];
-            akey[2 * k + 32] = tohex[hex[(int) akey[2 * k + 32]] ^ (ptbuf[k] >> 4)];
-            akey[2 * k + 33] = tohex[hex[(int) akey[2 * k + 33]] ^ (ptbuf[k] & 0x0f)];
+            akey[2 * k] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k]))] ^ (ctbuf[k] >> 4)];
+            akey[2 * k + 1] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k + 1]))] ^ (
+                                        ctbuf[k] & 0x0f)];
+            akey[2 * k + 32] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k + 32]))] ^ (
+                                         ptbuf[k] >> 4)];
+            akey[2 * k + 33] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k + 33]))] ^ (
+                                         ptbuf[k] & 0x0f)];
         }
     }
     file << "\n==========\n";
@@ -855,8 +849,9 @@ void mct_cbc_encrypt(BYTE ctbuf[16], cipherInstance &encipher, keyInstance &keyi
             file << tohex[ctbuf[k] >> 4] << tohex[ctbuf[k] & 0x0f];
         }
         for (int k = 0; k < 16; k++) {
-            akey[2 * k] = tohex[static_cast<int>(hex[static_cast<int>(akey[2 * k])] ^ (ctbuf[k] >> 4))];
-            akey[2 * k + 1] = tohex[static_cast<int>(hex[static_cast<int>(akey[2 * k + 1])] ^ (ctbuf[k] & 0x0f))];
+            akey[2 * k] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k]))] ^ (ctbuf[k] >> 4)];
+            akey[2 * k + 1] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k + 1]))] ^ (
+                                        ctbuf[k] & 0x0f)];
         }
     }
     /* 192 bit keys */
@@ -900,12 +895,15 @@ void mct_cbc_encrypt(BYTE ctbuf[16], cipherInstance &encipher, keyInstance &keyi
          * the remaining 128 bits from ctbuf (CT9999, and CT9998)
          */
         for (int k = 0; k < 8; k++) {
-            akey[2 * k] = tohex[static_cast<int>(hex[static_cast<int>(akey[2 * k])] ^ (ptbuf[k + 8] >> 4))];
-            akey[2 * k + 1] = tohex[static_cast<int>(hex[static_cast<int>(akey[2 * k + 1])] ^ (ptbuf[k + 8] & 0x0f))];
+            akey[2 * k] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k]))] ^ (ptbuf[k + 8] >> 4)];
+            akey[2 * k + 1] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k + 1]))] ^ (
+                                        ptbuf[k + 8] & 0x0f)];
         }
         for (int k = 0; k < 16; k++) {
-            akey[2 * k + 16] = tohex[static_cast<int>(hex[static_cast<int>(akey[2 * k + 16])] ^ (ctbuf[k] >> 4))];
-            akey[2 * k + 17] = tohex[static_cast<int>(hex[static_cast<int>(akey[2 * k + 17])] ^ (ctbuf[k] & 0x0f))];
+            akey[2 * k + 16] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k + 16]))] ^ (
+                                         ctbuf[k] >> 4)];
+            akey[2 * k + 17] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k + 17]))] ^ (
+                                         ctbuf[k] & 0x0f)];
         }
     }
     /* 256 bit keys */
@@ -949,10 +947,13 @@ void mct_cbc_encrypt(BYTE ctbuf[16], cipherInstance &encipher, keyInstance &keyi
          * the remaining 128 bits from ptbuf (CT9999, and CT9998)
          */
         for (int k = 0; k < 16; k++) {
-            akey[2 * k] = tohex[static_cast<int>(hex[static_cast<int>(akey[2 * k])] ^ (ptbuf[k] >> 4))];
-            akey[2 * k + 1] = tohex[static_cast<int>(hex[static_cast<int>(akey[2 * k + 1])] ^ (ptbuf[k] & 0x0f))];
-            akey[2 * k + 32] = tohex[static_cast<int>(hex[static_cast<int>(akey[2 * k + 32])] ^ (ctbuf[k] >> 4))];
-            akey[2 * k + 33] = tohex[static_cast<int>(hex[static_cast<int>(akey[2 * k + 33])] ^ (ctbuf[k] & 0x0f))];
+            akey[2 * k] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k]))] ^ (ptbuf[k] >> 4)];
+            akey[2 * k + 1] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k + 1]))] ^ (
+                                        ptbuf[k] & 0x0f)];
+            akey[2 * k + 32] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k + 32]))] ^ (
+                                         ctbuf[k] >> 4)];
+            akey[2 * k + 33] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k + 33]))] ^ (
+                                         ctbuf[k] & 0x0f)];
         }
     }
     file << "\n==========\n";
@@ -1027,8 +1028,9 @@ void mct_cbc_decrypt(BYTE ctbuf[16], cipherInstance &decipher, cipherInstance &e
             file << tohex[k >> 4] << tohex[k & 0x0f];
         }
         for (int k = 0; k < 16; k++) {
-            akey[2 * k] = tohex[static_cast<int>(hex[static_cast<int>(akey[2 * k])] ^ (ptbuf[k] >> 4))];
-            akey[2 * k + 1] = tohex[static_cast<int>(hex[static_cast<int>(akey[2 * k + 1])] ^ (ptbuf[k] & 0x0f))];
+            akey[2 * k] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k]))] ^ (ptbuf[k] >> 4)];
+            akey[2 * k + 1] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k + 1]))] ^ (
+                                        ptbuf[k] & 0x0f)];
         }
     }
     /* 192 bit keys */
@@ -1050,8 +1052,8 @@ void mct_cbc_decrypt(BYTE ctbuf[16], cipherInstance &decipher, cipherInstance &e
         for (int k = 0; k < 48; k++)
             file << akey[k];
         file << "\nIV=";
-        for (int k = 0; k < 16; k++)
-            file << tohex[ivbuf[k] >> 4] << tohex[ivbuf[k] & 0x0f];
+        for (unsigned char k: ivbuf)
+            file << tohex[k >> 4] << tohex[k & 0x0f];
         file << "\nCT=";
         for (int k = 0; k < 16; k++)
             file << tohex[ctbuf[k] >> 4] << tohex[ctbuf[k] & 0x0f];
@@ -1065,19 +1067,22 @@ void mct_cbc_decrypt(BYTE ctbuf[16], cipherInstance &decipher, cipherInstance &e
             }
         }
         file << "\nPT=";
-        for (int k = 0; k < 16; k++) {
-            file << tohex[ptbuf[k] >> 4] << tohex[ptbuf[k] & 0x0f];
+        for (unsigned char k: ptbuf) {
+            file << tohex[k >> 4] << tohex[k & 0x0f];
         }
         /* the first 64 bits come from the end of ivbuf, and
          * the remaining 128 bits from ctbuf (CT9999, and CT9998)
          */
         for (int k = 0; k < 8; k++) {
-            akey[2 * k] = tohex[static_cast<int>(hex[static_cast<int>(akey[2 * k])] ^ (ivbuf[k + 8] >> 4))];
-            akey[2 * k + 1] = tohex[static_cast<int>(hex[static_cast<int>(akey[2 * k + 1])] ^ (ivbuf[k + 8] & 0x0f))];
+            akey[2 * k] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k]))] ^ (ivbuf[k + 8] >> 4)];
+            akey[2 * k + 1] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k + 1]))] ^ (
+                                        ivbuf[k + 8] & 0x0f)];
         }
         for (int k = 0; k < 16; k++) {
-            akey[2 * k + 16] = tohex[static_cast<int>(hex[static_cast<int>(akey[2 * k + 16])] ^ (ptbuf[k] >> 4))];
-            akey[2 * k + 17] = tohex[static_cast<int>(hex[static_cast<int>(akey[2 * k + 17])] ^ (ptbuf[k] & 0x0f))];
+            akey[2 * k + 16] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k + 16]))] ^ (
+                                         ptbuf[k] >> 4)];
+            akey[2 * k + 17] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k + 17]))] ^ (
+                                         ptbuf[k] & 0x0f)];
         }
     }
     /* 256 bit keys */
@@ -1121,10 +1126,13 @@ void mct_cbc_decrypt(BYTE ctbuf[16], cipherInstance &decipher, cipherInstance &e
          * the remaining 128 bits from ptbuf (CT9999, and CT9998)
          */
         for (int k = 0; k < 16; k++) {
-            akey[2 * k] = tohex[static_cast<int>(hex[static_cast<int>(akey[2 * k])] ^ (ivbuf[k] >> 4))];
-            akey[2 * k + 1] = tohex[static_cast<int>(hex[static_cast<int>(akey[2 * k + 1])] ^ (ivbuf[k] & 0x0f))];
-            akey[2 * k + 32] = tohex[static_cast<int>(hex[static_cast<int>(akey[2 * k + 32])] ^ (ptbuf[k] >> 4))];
-            akey[2 * k + 33] = tohex[static_cast<int>(hex[static_cast<int>(akey[2 * k + 33])] ^ (ptbuf[k] & 0x0f))];
+            akey[2 * k] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k]))] ^ (ivbuf[k] >> 4)];
+            akey[2 * k + 1] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k + 1]))] ^ (
+                                        ivbuf[k] & 0x0f)];
+            akey[2 * k + 32] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k + 32]))] ^ (
+                                         ptbuf[k] >> 4)];
+            akey[2 * k + 33] = tohex[hex[static_cast<int>(static_cast<unsigned char>(akey[2 * k + 33]))] ^ (
+                                         ptbuf[k] & 0x0f)];
         }
     }
     file << "\n==========\n";
