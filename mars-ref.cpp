@@ -349,6 +349,14 @@ int mars_setup(int n, WORD *kp, WORD *ep)
     return(TRUE);
 }
 #else
+/**
+ *
+ * @param n  key length
+ * @param kp  key
+ * @param ep  expanded key
+ * @return  1 if success, BAD_KEY_MAT if key length is invalid
+ */
+// masr_setup function is used to generate the expanded key from the given key
 int mars_setup(int n, WORD *kp, WORD *ep)
 {
     WORD T[15] = {0};
@@ -398,6 +406,15 @@ int mars_setup(int n, WORD *kp, WORD *ep)
 
 /* One mixing round in forward mode:
  * data[src] is used to modify data[dst1], data[dst2] and data[dst2]
+ *
+ */
+/**
+ *
+ * @param data  data array
+ * @param src  source index
+ * @param dst1  destination index 1
+ * @param dst2  destination index 2
+ * @param dst3  destination index 3
  */
 void forward_mix_round(WORD data[], int src, int dst1, int dst2, int dst3)
 {
@@ -418,6 +435,14 @@ void forward_mix_round(WORD data[], int src, int dst1, int dst2, int dst3)
 
 /* One mixing round in backwards mode:
  * data[src] is used to modify data[dst1], data[dst2] and data[dst2]
+ */
+/**
+ *
+ * @param data  data array
+ * @param src   source index
+ * @param dst1  destination index 1
+ * @param dst2  destination index 2
+ * @param dst3 destination index 3
  */
 void backwards_mix_round(WORD data[], int src, int dst1, int dst2, int dst3)
 {
@@ -452,6 +477,12 @@ void backwards_mix_round(WORD data[], int src, int dst1, int dst2, int dst3)
 
 
 /* The basic mars encryption: */
+/**
+ *
+ * @param in  input data
+ * @param out  output data
+ * @param key  expanded key
+ */
 void mars_encrypt(WORD *in, WORD *out, WORD *key)
 {
     int i;
@@ -526,6 +557,12 @@ void mars_encrypt(WORD *in, WORD *out, WORD *key)
 
 
 /* mars decryption is simply encryption in reverse */
+/**
+ *
+ * @param in input data
+ * @param out output data
+ * @param key   expanded key
+ */
 void mars_decrypt(WORD *in, WORD *out, WORD *key)
 {
     int i;
@@ -624,6 +661,16 @@ BYTE hex[256] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
 /* NIST defined high level key setup */
+/**
+ *
+ * @param key  key instance
+ * @param direction  direction
+ * @param keyLen  key length
+ * @param keyMaterial  key material
+ * @return   (mars_setup(keyLen/32,tmpkey,key->E)); which is the result of the mars_setup function returning 1 if success, BAD_KEY_MAT if key length is invalid
+ *         if key is nullptr return BAD_KEY_INSTANCE
+ *
+ */
 int makeKey(keyInstance *key, BYTE direction, int keyLen, char *keyMaterial)
 {
     WORD tmpkey[EKEY_WORDS];
@@ -657,6 +704,13 @@ int makeKey(keyInstance *key, BYTE direction, int keyLen, char *keyMaterial)
     return(mars_setup(keyLen/32,tmpkey,key->E));
 }
 
+/**
+ *
+ * @param cipher cipher instance
+ * @param mode  mode
+ * @param IV  initialization vector
+ * @return      TRUE if success, BAD_CIPHER_MODE if cipher is nullptr
+ */
 int cipherInit(cipherInstance *cipher, BYTE mode, char *IV)
 {
     int i,j;
@@ -682,6 +736,15 @@ cipher->CIV[i] = BSWAP(reinterpret_cast<WORD*>(&cipher->IV)[i]);
     return(TRUE);
 }
 
+/**
+ *
+ * @param cipher  cipher instance
+ * @param key   key instance
+ * @param input     input data
+ * @param inputLen  input length
+ * @param outBuffer     output buffer
+ * @return  inputLen if success, BAD_CIPHER_MODE if cipher is nullptr
+ */
 int blockEncrypt(cipherInstance *cipher, keyInstance *key, BYTE *input,
                  int inputLen, BYTE *outBuffer)
 {
@@ -759,6 +822,15 @@ cipher->CIV[3] = (cipher->CIV[3] << 1) | static_cast<WORD>(outBuffer[0]);
     return(inputLen);
 }
 
+/**
+ *
+ * @param cipher    cipher instance
+ * @param key   key instance
+ * @param input     input data
+ * @param inputLen  input length
+ * @param outBuffer     output buffer
+ * @return  inputLen if success, BAD_CIPHER_MODE if cipher is nullptr
+ */
 int blockDecrypt(cipherInstance *cipher, keyInstance *key, BYTE *input,
                  int inputLen, BYTE *outBuffer)
 {
