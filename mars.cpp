@@ -1,14 +1,19 @@
 #include "aes.h"
 
-#define BSWAP(x) \
-( (( x          ) << 24) | \
-(((x)&0xff00  ) << 8 ) | \
-(((x)&0xff0000) >> 8 ) | \
-(( x          ) >> 24)  )
+inline WORD BSWAP(WORD x) {
+    return (((x) << 24) |
+            (((x) & 0xff00) << 8) |
+            (((x) & 0xff0000) >> 8) |
+            ((x) >> 24));
+}
 
-/* macros for left and right rotations */
-#define LROTATE(a,b) (((a)<<(int)(b&31)) | ((a)>>(W - (int)(b&31))))
-#define RROTATE(a,b) (((a)>>(int)(b&31)) | ((a)<<(W - (int)(b&31))))
+inline WORD LROTATE(WORD a, int b) {
+    return (((a) << (b & 31)) | ((a) >> (W - (b & 31))));
+}
+
+inline WORD RROTATE(WORD a, int b) {
+    return (((a) >> (b & 31)) | ((a) << (W - (b & 31))));
+}
 
 
 /* two 8 x 32 sboxes - stored together to save a pointer
@@ -157,22 +162,27 @@ static WORD S[512] = {
  * Since internal words are always kept little-endian, always
  * swap bytes before displaying.
  */
-#ifdef IVT
-int ivt_debug = 0;
+// Define a boolean variable to control debug mode
+bool ivt_debug = false;
 FILE *ivt_fp;
 int ivt_l = 0;
-#define IVTSWAP(x) \
-    ( (( x          ) << 24) | \
-      (((x)&0xff00  ) << 8 ) | \
-      (((x)&0xff0000) >> 8 ) | \
-      (( x          ) >> 24)  )
-#define IVT_DEBUG(a,b,c,d) \
-    if (ivt_debug) \
-        fprintf(ivt_fp,"IV%d=%8.8lx %8.8lx %8.8lx %8.8lx\n",ivt_l++,\
-        IVTSWAP(a),IVTSWAP(b),IVTSWAP(c),IVTSWAP(d));
-#else
-#define IVT_DEBUG(a,b,c,d)
-#endif
+
+// Define IVTSWAP function
+inline WORD IVTSWAP(WORD x) {
+    return (((x) << 24) |
+            (((x) & 0xff00) << 8) |
+            (((x) & 0xff0000) >> 8) |
+            ((x) >> 24));
+}
+
+// Define IVT_DEBUG function
+inline void IVT_DEBUG(WORD a, WORD b, WORD c, WORD d) {
+    if (ivt_debug) {
+        fprintf(ivt_fp, "IV%d=%8.8lx %8.8lx %8.8lx %8.8lx\n", ivt_l++,
+                IVTSWAP(a), IVTSWAP(b), IVTSWAP(c), IVTSWAP(d));
+    }
+}
+
 
 /*************************************************************************
  *
@@ -183,7 +193,7 @@ int ivt_l = 0;
  ************************************************************************/
 
 /* if multiplication subkey k has 10 0's or 10 1's, mask in a fixing value */
-static WORD fix_subkey(WORD k, WORD r) {
+static WORD fix_subkey(WORD k, WORD r, bool isTweak) {
     /* the mask words come from S[265]..S[268], as chosen by index.c */
     const WORD *B = &S[265];
 
@@ -212,11 +222,18 @@ static WORD fix_subkey(WORD k, WORD r) {
     /* we turn off the two lowest bits of M, and also every bit
      * M_i such that k_i is not equal to both k_{i-1} and k_{i+1}
      */
-#ifdef NO_TWEAK1
-    m1 &= ((~k)^(k<<1)) & ((~k)^(k>>1)) & 0xfffffffc;
-#else
-    m1 &= ((~k) ^ (k << 1)) & ((~k) ^ (k >> 1)) & 0x7ffffffc;
-#endif
+
+    // The choice between these two lines below depends on the specific requirements
+    // or optimizations of the cryptographic algorithm being implemented. The first line
+    // (0xfffffffc) clears the two lowest bits of m1, while the second line (0x7ffffffc)
+    // clears the lowest two bits while preserving the highest bit. Understanding the
+    // significance of these bit manipulations in the context of the algorithm is crucial
+    // for making an informed decision:
+
+    if (isTweak)
+        m1 &= ((~k) ^ (k << 1)) & ((~k) ^ (k >> 1)) & 0xfffffffc;
+    else
+        m1 &= ((~k) ^ (k << 1)) & ((~k) ^ (k >> 1)) & 0x7ffffffc;
 
     /* and finally pick a pattern, rotate it,
      * and xor it into k under the control of the mask m1
@@ -233,59 +250,68 @@ static WORD fix_subkey(WORD k, WORD r) {
  * kp (input) is a pointer to the array of key words
  * ep (output) is a pointer to the array of EKEY_WORDS expanded subkey WORDs
  */
-#ifdef NO_TWEAK2
+
+//The first implementation, follows a more complex algorithm where
+//constants are initialized at the beginning of the array, linear expansion is performed to generate 40 words,
+//subkeys are stirred multiple times with full type-1 S-box rounds, and finally, all multiplication subkeys are
+//checked and fixed using the fix_subkey function.
+/*
 int mars_setup(int n, WORD *kp, WORD *ep)
 {
-    /* put some constants in positions -7..-1 of the expanded key
-     * array (the first zero word is just so that things will be
-     * aligned on 128-bit boundaries).
-     * p[-7..-1] = S[0..6]
-     */
+    // put some constants in positions -7..-1 of the expanded key
+    //array (the first zero word is just so that things will be
+    // aligned on 128-bit boundaries).
+    // p[-7..-1] = S[0..6]
+
     WORD buf[8+EKEY_WORDS] = {0};
     WORD *p = &buf[8];
     int i,j;
 
-    /* check key length */
+    // check key length
     if ((n<4)||(n>39))
         return(BAD_KEY_MAT);
 
-    /* initialize constants at the beginning of the array */
+    // initialize constants at the beginning of the array
     for (i=0; i<7; i++)
         p[i-7] = S[i];
 
-    /* Initial linear expansion to get 40 words */
+    // Initial linear expansion to get 40 words
     for (i=0,j=0; i<EKEY_WORDS-1; i++,j++) {
         WORD w = p[i-7] ^ p[i-2];
         if (j >= n)
             j -= n;
         p[i] = LROTATE(w,3) ^ kp[j] ^ i;
     }
-    /* set last word to length to prevent related keys */
+    // set last word to length to prevent related keys
     p[EKEY_WORDS-1] = (WORD)n;
 
-    /* stir subkeys NUM_SETUP times */
+    // stir subkeys NUM_SETUP times
     for (i=0;i<NUM_SETUP;i++){
-        /* stir with full type-1 s-box rounds */
+        // stir with full type-1 s-box rounds
         for (j=1; j<EKEY_WORDS; j++) {
             p[j] += S[ p[j-1]&511 ];
             p[j] = LROTATE(p[j],9);
         }
-        /* wrap around end */
+        // wrap around end
         p[0] += S[ p[EKEY_WORDS-1]&511 ];
         p[0] = LROTATE(p[0],9);
     }
 
-    /* copy subkeys to mars_ctx, with swapping around */
+    // copy subkeys to mars_ctx, with swapping around
     for (i=0; i < EKEY_WORDS; i++)
         ep[(7*i)%40] = p[i];
 
-    /* check and fix all multiplication subkeys */
+    // check and fix all multiplication subkeys
     for (i=NUM_DATA+1;i<(EKEY_WORDS-NUM_DATA);i+=2)
         ep[i] = fix_subkey(ep[i], ep[i+3]);
 
     return(TRUE);
 }
-#else
+*/
+//The second implementation, employs a simpler approach. It initializes an array T[] with key data,
+//performs linear transformations and stirring rounds iteratively, and copies subkeys to mars_ctx,
+//with some swapping around. Like the first implementation, it also checks and fixes multiplication
+//subkeys using the fix_subkey function.
 
 // masr_setup function is used to generate the expanded key from the given key
 int mars_setup(int n, const WORD *kp, WORD *ep) {
@@ -328,11 +354,10 @@ int mars_setup(int n, const WORD *kp, WORD *ep) {
 
     /* check and fix all multiplication subkeys */
     for (i = NUM_DATA + 1; i < (EKEY_WORDS - NUM_DATA); i += 2)
-        ep[i] = fix_subkey(ep[i], ep[i - 1]);
+        ep[i] = fix_subkey(ep[i], ep[i - 1], false);
 
     return (1);
 }
-#endif
 
 /* One mixing round in forward mode:
  * data[src] is used to modify data[dst1], data[dst2] and data[dst2]
@@ -387,6 +412,7 @@ void backwards_mix_round(WORD data[], int src, int dst1, int dst2, int dst3) {
 void mars_encrypt(const WORD *in, WORD *out, const WORD *key) {
     int i;
     IVT_DEBUG(in[0], in[1], in[2], in[3]);
+
 
     /* first, add subkeys to all input data words */
     out[0] = in[0] + key[0];
@@ -612,61 +638,80 @@ int cipherInit(cipherInstance *cipher, const BYTE mode, const char *IV) {
                                                   char>(IV[i + 1])]);
         /* copy BYTE IV to word CIV, with conversion if necessary */
         for (i = 0; i < NUM_DATA; i++)
-            cipher->CIV[i] = BSWAP(reinterpret_cast<WORD*>(&cipher->IV)[i]);
+            cipher->CIV[i] = BSWAP(reinterpret_cast<WORD *>(&cipher->IV)[i]);
     }
     return (TRUE);
 }
 
 int blockEncrypt(cipherInstance *cipher, keyInstance *key, BYTE *input,
                  int inputLen, BYTE *outBuffer) {
+    // bool ifSwapBytes is used to control byte swapping in the input data before encryption and in the output data after encryption.
+    bool ifSwapBytes = false;
+
+
+    WORD tmp[4];
     int i;
 
     if (cipher->mode == MODE_ECB) {
         for (i = 0; i < inputLen / 8; i += 16) {
-#           ifdef SWAP_BYTES
-                tmp[0] = BSWAP(*(WORD *)(input+i+0));
-                tmp[1] = BSWAP(*(WORD *)(input+i+4));
-                tmp[2] = BSWAP(*(WORD *)(input+i+8));
-                tmp[3] = BSWAP(*(WORD *)(input+i+12));
-                mars_encrypt(tmp,(WORD *)(outBuffer+i),key->E);
-                *(WORD *)(outBuffer+i+0) = BSWAP(*(WORD *)(outBuffer+i+0));
-                *(WORD *)(outBuffer+i+4) = BSWAP(*(WORD *)(outBuffer+i+4));
-                *(WORD *)(outBuffer+i+8) = BSWAP(*(WORD *)(outBuffer+i+8));
-                *(WORD *)(outBuffer+i+12) = BSWAP(*(WORD *)(outBuffer+i+12));
-#           else
-            mars_encrypt(reinterpret_cast<WORD *>(input + i), reinterpret_cast<WORD *>(outBuffer + i), key->E);
-#           endif
+            if (ifSwapBytes) {
+                tmp[0] = BSWAP(static_cast<WORD>(*(reinterpret_cast<WORD *>(input + i + 0))));
+                tmp[1] = BSWAP(static_cast<WORD>(*(reinterpret_cast<WORD *>(input + i + 4))));
+                tmp[2] = BSWAP(static_cast<WORD>(*(reinterpret_cast<WORD *>(input + i + 8))));
+                tmp[3] = BSWAP(static_cast<WORD>(*(reinterpret_cast<WORD *>(input + i + 12))));
+                mars_encrypt(tmp, reinterpret_cast<WORD *>(outBuffer + i), key->E);
+                *(reinterpret_cast<WORD *>(outBuffer + i + 0)) = BSWAP(
+                    static_cast<WORD>(*(reinterpret_cast<WORD *>(outBuffer + i + 0))));
+                *(reinterpret_cast<WORD *>(outBuffer + i + 4)) = BSWAP(
+                    static_cast<WORD>(*(reinterpret_cast<WORD *>(outBuffer + i + 4))));
+                *(reinterpret_cast<WORD *>(outBuffer + i + 8)) = BSWAP(
+                    static_cast<WORD>(*(reinterpret_cast<WORD *>(outBuffer + i + 8))));
+                *(reinterpret_cast<WORD *>(outBuffer + i + 12)) = BSWAP(
+                    static_cast<WORD>(*(reinterpret_cast<WORD *>(outBuffer + i + 12))));
+            } else
+                mars_encrypt(reinterpret_cast<WORD *>(input + i), reinterpret_cast<WORD *>(outBuffer + i), key->E);
         }
     } else if (cipher->mode == MODE_CBC) {
-        WORD tmp[4];
         for (i = 0; i < inputLen / 8; i += 16) {
-#           ifdef SWAP_BYTES
-                tmp[0] = BSWAP(*(WORD *)(input+i+0)) ^ cipher->CIV[0];
-                tmp[1] = BSWAP(*(WORD *)(input+i+4)) ^ cipher->CIV[1];
-                tmp[2] = BSWAP(*(WORD *)(input+i+8)) ^ cipher->CIV[2];
-                tmp[3] = BSWAP(*(WORD *)(input+i+12)) ^ cipher->CIV[3];
-                mars_encrypt(tmp,(WORD *)(outBuffer+i),key->E);
-                cipher->CIV[0] = *(WORD *)(outBuffer+i+0);
-                cipher->CIV[1] = *(WORD *)(outBuffer+i+4);
-                cipher->CIV[2] = *(WORD *)(outBuffer+i+8);
-                cipher->CIV[3] = *(WORD *)(outBuffer+i+12);
-                *(WORD *)(outBuffer+i+0) = BSWAP(*(WORD *)(outBuffer+i+0));
-                *(WORD *)(outBuffer+i+4) = BSWAP(*(WORD *)(outBuffer+i+4));
-                *(WORD *)(outBuffer+i+8) = BSWAP(*(WORD *)(outBuffer+i+8));
-                *(WORD *)(outBuffer+i+12) = BSWAP(*(WORD *)(outBuffer+i+12));
-#           else
-            tmp[0] = *reinterpret_cast<WORD *>(input + i + 0) ^ cipher->CIV[0];
-            tmp[1] = *reinterpret_cast<WORD *>(input + i + 4) ^ cipher->CIV[1];
-            tmp[2] = *reinterpret_cast<WORD *>(input + i + 8) ^ cipher->CIV[2];
-            tmp[3] = *reinterpret_cast<WORD *>(input + i + 12) ^ cipher->CIV[3];
+            // byte swapping is applied to the input data (input) before encryption and to the output
+            // data (outBuffer) after encryption. It swaps bytes to convert between little-endian and
+            // big-endian representations. This ensures that the encryption operates on data in a consistent
+            // endianness, which might be necessary depending on the platform or protocol requirements
+            if (ifSwapBytes) {
+                tmp[0] = BSWAP(static_cast<WORD>(*(reinterpret_cast<WORD *>(input + i + 0))) ^ cipher->CIV[0]);
+                tmp[1] = BSWAP(static_cast<WORD>(*(reinterpret_cast<WORD *>(input + i + 4))) ^ cipher->CIV[1]);
+                tmp[2] = BSWAP(static_cast<WORD>(*(reinterpret_cast<WORD *>(input + i + 8))) ^ cipher->CIV[2]);
+                tmp[3] = BSWAP(static_cast<WORD>(*(reinterpret_cast<WORD *>(input + i + 12))) ^ cipher->CIV[3]);
+                mars_encrypt(tmp, reinterpret_cast<WORD *>(outBuffer + i), key->E);
+                cipher->CIV[0] = static_cast<WORD>(*(reinterpret_cast<WORD *>(outBuffer + i + 0)));
+                cipher->CIV[1] = static_cast<WORD>(*(reinterpret_cast<WORD *>(outBuffer + i + 4)));
+                cipher->CIV[2] = static_cast<WORD>(*(reinterpret_cast<WORD *>(outBuffer + i + 8)));
+                cipher->CIV[3] = static_cast<WORD>(*(reinterpret_cast<WORD *>(outBuffer + i + 12)));
+                *(reinterpret_cast<WORD *>(outBuffer + i + 0)) = BSWAP(
+                    static_cast<WORD>(*(reinterpret_cast<WORD *>(outBuffer + i + 0))));
+                *(reinterpret_cast<WORD *>(outBuffer + i + 4)) = BSWAP(
+                    static_cast<WORD>(*(reinterpret_cast<WORD *>(outBuffer + i + 4))));
+                *(reinterpret_cast<WORD *>(outBuffer + i + 8)) = BSWAP(
+                    static_cast<WORD>(*(reinterpret_cast<WORD *>(outBuffer + i + 8))));
+                *(reinterpret_cast<WORD *>(outBuffer + i + 12)) = BSWAP(
+                    static_cast<WORD>(*(reinterpret_cast<WORD *>(outBuffer + i + 12))));
+            } else {
+                //byte swapping is not explicitly performed. Instead, the code directly accesses the input and
+                //output data without swapping bytes. This assumes that the data is already in the correct
+                //endianness for encryption and doesn't require any conversion before or after encryption.
 
-            mars_encrypt(tmp, reinterpret_cast<WORD *>(outBuffer + i), key->E);
-            cipher->CIV[0] = *reinterpret_cast<WORD *>(outBuffer + i + 0);
-            cipher->CIV[1] = *reinterpret_cast<WORD *>(outBuffer + i + 4);
-            cipher->CIV[2] = *reinterpret_cast<WORD *>(outBuffer + i + 8);
-            cipher->CIV[3] = *reinterpret_cast<WORD *>(outBuffer + i + 12);
 
-#           endif
+                tmp[0] = *reinterpret_cast<WORD *>(input + i + 0) ^ cipher->CIV[0];
+                tmp[1] = *reinterpret_cast<WORD *>(input + i + 4) ^ cipher->CIV[1];
+                tmp[2] = *reinterpret_cast<WORD *>(input + i + 8) ^ cipher->CIV[2];
+                tmp[3] = *reinterpret_cast<WORD *>(input + i + 12) ^ cipher->CIV[3];
+
+                mars_encrypt(tmp, reinterpret_cast<WORD *>(outBuffer + i), key->E);
+                cipher->CIV[0] = *reinterpret_cast<WORD *>(outBuffer + i + 0);
+                cipher->CIV[1] = *reinterpret_cast<WORD *>(outBuffer + i + 4);
+                cipher->CIV[2] = *reinterpret_cast<WORD *>(outBuffer + i + 8);
+                cipher->CIV[3] = *reinterpret_cast<WORD *>(outBuffer + i + 12);
+            }
         }
     } else if (cipher->mode == MODE_CFB1) {
         /* Input is one bit (lsb of first byte).
@@ -690,60 +735,71 @@ int blockEncrypt(cipherInstance *cipher, keyInstance *key, BYTE *input,
     return (inputLen);
 }
 
-int blockDecrypt(cipherInstance *cipher, keyInstance *key, BYTE *input,
+int blockDecrypt(cipherInstance *cipher, const keyInstance *key, BYTE *input,
                  int inputLen, BYTE *outBuffer) {
+    //bool ifSwapBytes is used to control byte swapping in the input data before decryption and in the output data after decryption.
+    bool ifSwapBytes = false;
     int i;
 
     if (cipher->mode == MODE_ECB) {
         for (i = 0; i < inputLen / 8; i += 16) {
-#           ifdef SWAP_BYTES
+            // byte swapping is applied to the input data (input) before decryption and to the output
+            // data (outBuffer) after decryption. This byte swapping ensures that the decrypted data is in
+            // the correct endianness before being stored in the output buffer.
+            if (ifSwapBytes) {
                 WORD tmp[4];
-                tmp[0] = BSWAP(*(WORD *)(input+i+0));
-                tmp[1] = BSWAP(*(WORD *)(input+i+4));
-                tmp[2] = BSWAP(*(WORD *)(input+i+8));
-                tmp[3] = BSWAP(*(WORD *)(input+i+12));
-                mars_decrypt(tmp,(WORD *)(outBuffer+i),key->E);
-                *(WORD *)(outBuffer+i+0) = BSWAP(*(WORD *)(outBuffer+i+0));
-                *(WORD *)(outBuffer+i+4) = BSWAP(*(WORD *)(outBuffer+i+4));
-                *(WORD *)(outBuffer+i+8) = BSWAP(*(WORD *)(outBuffer+i+8));
-                *(WORD *)(outBuffer+i+12) = BSWAP(*(WORD *)(outBuffer+i+12));
-#           else
-            mars_decrypt(reinterpret_cast<WORD *>(input + i), reinterpret_cast<WORD *>(outBuffer + i), key->E);
-#           endif
+                tmp[0] = BSWAP(static_cast<WORD>(*(reinterpret_cast<WORD *>(input + i + 0))));
+                tmp[1] = BSWAP(static_cast<WORD>(*(reinterpret_cast<WORD *>(input + i + 4))));
+                tmp[2] = BSWAP(static_cast<WORD>(*(reinterpret_cast<WORD *>(input + i + 8))));
+                tmp[3] = BSWAP(static_cast<WORD>(*(reinterpret_cast<WORD *>(input + i + 12))));
+                mars_decrypt(tmp, reinterpret_cast<WORD *>(outBuffer + i), key->E);
+                *(reinterpret_cast<WORD *>(outBuffer + i + 0)) = BSWAP(
+                    static_cast<WORD>(*(reinterpret_cast<WORD *>(outBuffer + i + 0))));
+                *(reinterpret_cast<WORD *>(outBuffer + i + 4)) = BSWAP(
+                    static_cast<WORD>(*(reinterpret_cast<WORD *>(outBuffer + i + 4))));
+                *(reinterpret_cast<WORD *>(outBuffer + i + 8)) = BSWAP(
+                    static_cast<WORD>(*(reinterpret_cast<WORD *>(outBuffer + i + 8))));
+                *(reinterpret_cast<WORD *>(outBuffer + i + 12)) = BSWAP(
+                    static_cast<WORD>(*(reinterpret_cast<WORD *>(outBuffer + i + 12))));
+            }
+            // byte swapping is not explicitly performed. Instead, the code directly decrypts the
+            // input data without swapping bytes and stores the decrypted data directly into the output buffer.
+            // This assumes that the decrypted data is already in the correct endianness, either because
+            // it was encrypted in the same endianness or because byte swapping is handled elsewhere in the system.
+            else mars_decrypt(reinterpret_cast<WORD *>(input + i), reinterpret_cast<WORD *>(outBuffer + i), key->E);
         }
     } else if (cipher->mode == MODE_CBC) {
         for (i = 0; i < inputLen / 8; i += 16) {
-#           ifdef SWAP_BYTES
+            if (ifSwapBytes) {
                 WORD tmp[4];
-                tmp[0] = BSWAP(*(WORD *)(input+i+0));
-                tmp[1] = BSWAP(*(WORD *)(input+i+4));
-                tmp[2] = BSWAP(*(WORD *)(input+i+8));
-                tmp[3] = BSWAP(*(WORD *)(input+i+12));
-                mars_decrypt(tmp,(WORD *)(outBuffer+i),key->E);
-                *(WORD *)(outBuffer+i+0) = BSWAP(*(WORD *)(outBuffer+i+0)
-                    ^ cipher->CIV[0]);
-                *(WORD *)(outBuffer+i+4) = BSWAP(*(WORD *)(outBuffer+i+4)
-                    ^ cipher->CIV[1]);
-                *(WORD *)(outBuffer+i+8) = BSWAP(*(WORD *)(outBuffer+i+8)
-                    ^ cipher->CIV[2]);
-                *(WORD *)(outBuffer+i+12) = BSWAP(*(WORD *)(outBuffer+i+12)
-                    ^ cipher->CIV[3]);
+                tmp[0] = BSWAP(static_cast<WORD>(*(reinterpret_cast<WORD *>(input + i + 0))));
+                tmp[1] = BSWAP(static_cast<WORD>(*(reinterpret_cast<WORD *>(input + i + 4))));
+                tmp[2] = BSWAP(static_cast<WORD>(*(reinterpret_cast<WORD *>(input + i + 8))));
+                tmp[3] = BSWAP(static_cast<WORD>(*(reinterpret_cast<WORD *>(input + i + 12))));
+                mars_decrypt(tmp, reinterpret_cast<WORD *>(outBuffer + i), key->E);
+                *(reinterpret_cast<WORD *>(outBuffer + i + 0)) = BSWAP(
+                    static_cast<WORD>(*(reinterpret_cast<WORD *>(outBuffer + i + 0))) ^ cipher->CIV[0]);
+                *(reinterpret_cast<WORD *>(outBuffer + i + 4)) = BSWAP(
+                    static_cast<WORD>(*(reinterpret_cast<WORD *>(outBuffer + i + 4))) ^ cipher->CIV[1]);
+                *(reinterpret_cast<WORD *>(outBuffer + i + 8)) = BSWAP(
+                    static_cast<WORD>(*(reinterpret_cast<WORD *>(outBuffer + i + 8))) ^ cipher->CIV[2]);
+                *(reinterpret_cast<WORD *>(outBuffer + i + 12)) = BSWAP(
+                    static_cast<WORD>(*(reinterpret_cast<WORD *>(outBuffer + i + 12))) ^ cipher->CIV[3]);
                 cipher->CIV[0] = tmp[0];
                 cipher->CIV[1] = tmp[1];
                 cipher->CIV[2] = tmp[2];
                 cipher->CIV[3] = tmp[3];
-#           else
-            mars_decrypt(reinterpret_cast<WORD *>(input + i), reinterpret_cast<WORD *>(outBuffer + i), key->E);
-            *reinterpret_cast<WORD *>(outBuffer + i + 0) ^= cipher->CIV[0];
-            *reinterpret_cast<WORD *>(outBuffer + i + 4) ^= cipher->CIV[1];
-            *reinterpret_cast<WORD *>(outBuffer + i + 8) ^= cipher->CIV[2];
-            *reinterpret_cast<WORD *>(outBuffer + i + 12) ^= cipher->CIV[3];
-            cipher->CIV[0] = *reinterpret_cast<WORD *>(input + i + 0);
-            cipher->CIV[1] = *reinterpret_cast<WORD *>(input + i + 4);
-            cipher->CIV[2] = *reinterpret_cast<WORD *>(input + i + 8);
-            cipher->CIV[3] = *reinterpret_cast<WORD *>(input + i + 12);
-
-#           endif
+            } else {
+                mars_decrypt(reinterpret_cast<WORD *>(input + i), reinterpret_cast<WORD *>(outBuffer + i), key->E);
+                *reinterpret_cast<WORD *>(outBuffer + i + 0) ^= cipher->CIV[0];
+                *reinterpret_cast<WORD *>(outBuffer + i + 4) ^= cipher->CIV[1];
+                *reinterpret_cast<WORD *>(outBuffer + i + 8) ^= cipher->CIV[2];
+                *reinterpret_cast<WORD *>(outBuffer + i + 12) ^= cipher->CIV[3];
+                cipher->CIV[0] = *reinterpret_cast<WORD *>(input + i + 0);
+                cipher->CIV[1] = *reinterpret_cast<WORD *>(input + i + 4);
+                cipher->CIV[2] = *reinterpret_cast<WORD *>(input + i + 8);
+                cipher->CIV[3] = *reinterpret_cast<WORD *>(input + i + 12);
+            }
         }
     } else if (cipher->mode == MODE_CFB1) {
         /* Input is one bit (lsb of first byte).

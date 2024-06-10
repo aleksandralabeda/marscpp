@@ -70,6 +70,7 @@ void ivt_ecb(BYTE ctbuf[16], BYTE outbuf[16], cipherInstance &decipher, cipherIn
     for (int k = 0; k < 16; k++)
         file << hex << setw(2) << setfill('0') << static_cast<int>(ctbuf[k]);
     file << "\n";
+
     blockDecrypt(&decipher, &keyin, ctbuf, 128, outbuf);
     file << "PT=";
     for (int k = 0; k < 16; k++)

@@ -60,7 +60,7 @@ int cipherInit(cipherInstance *cipher, BYTE mode, const char *IV);
 int blockEncrypt(cipherInstance *cipher, keyInstance *key, BYTE *input,
                  int inputLen, BYTE *outBuffer);
 
-int blockDecrypt(cipherInstance *cipher, keyInstance *key, BYTE *input,
+int blockDecrypt(cipherInstance *cipher, const keyInstance *key, BYTE *input,
                  int inputLen, BYTE *outBuffer);
 
 
